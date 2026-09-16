@@ -39,7 +39,12 @@ var options = new HttpHybridCacheHandlerOptions
 
 Only GET and HEAD requests are cached. Responses are cached when:
 
-- Status is 200 OK.
+- The response carries freshness information: `max-age`, an `Expires` date, or a
+  `Last-Modified` date. With only `Last-Modified`, heuristic freshness applies
+  and the status must be in RFC 9111's heuristically cacheable set (`200`,
+  `203`, `204`, `206`, `300`, `301`, `308`, `404`, `405`, `410`, `414`, `501`)
+  or the response must be marked `public`. A configured `FallbackCacheDuration`
+  caches responses carrying none of these, at any status.
 - Cache-Control allows caching: not `no-store`, nor `no-cache` without validation.
 - Content size is within `MaxCacheableContentSize`.
 
@@ -55,6 +60,10 @@ Keys are generated from:
 
 On reads, the handler enforces stored response `Vary` values and selects a matching
 variant.
+
+The default key is method plus URI only. When cache storage is shared across users
+or tenants, list an identity-bearing header in `VaryHeaders`; see
+[cache modes](/docs/hybrid-cache-handler/configuration/#cachemode.private-default).
 
 ## Conditional requests
 

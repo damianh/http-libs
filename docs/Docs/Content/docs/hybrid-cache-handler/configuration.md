@@ -18,13 +18,19 @@ Browser-like behavior suitable for client applications:
 
 - `HttpClient` in web applications, APIs, and background services.
 - Scaled-out clients sharing cache across multiple instances or serverless/Lambda.
-- Per-user/per-tenant caching scenarios.
+- Per-user/per-tenant caching scenarios when `VaryHeaders` includes an
+  identity-bearing header.
 
 Behavior:
 
 - Caches responses with `Cache-Control: private`.
 - Uses `max-age`, ignoring `s-maxage`.
 - Caches authenticated requests if marked `private` or `max-age`.
+- **When cache storage is shared across users or tenants, include an
+  identity-bearing header, such as `Authorization` or a tenant/user header, in
+  `VaryHeaders`.** The default request key is method plus URI only; without
+  that partition, cached authenticated responses can be disclosed to another
+  user or tenant.
 - Request keys can be client-specific when `VaryHeaders` is configured.
 - Response variants are always matched using stored `Vary` values.
 
