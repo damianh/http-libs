@@ -1,6 +1,6 @@
 using System.Buffers;
 using System.Buffers.Binary;
-using System.Security.Cryptography;
+using System.Net.Http;
 using System.Text;
 using Azure;
 using Azure.Storage.Blobs;
@@ -24,10 +24,10 @@ public sealed class AzureBlobContentStore : ILargeHttpCacheContentStore
     /// <summary>Creates a store without provisioning or taking ownership of the client.</summary>
     public AzureBlobContentStore(BlobContainerClient container, AzureBlobContentStoreOptions? options = null)
     {
-        ArgumentNullException.ThrowIfNull(container);
+        Guard.NotNull(container);
         _container = container;
         var prefix = (options ?? new AzureBlobContentStoreOptions()).Namespace;
-        ArgumentException.ThrowIfNullOrWhiteSpace(prefix);
+        Guard.NotNullOrWhiteSpace(prefix);
         _prefix = prefix.TrimEnd('/');
         if (_prefix.Length is 0 or > 900 || _prefix.Any(char.IsControl))
         {
@@ -40,8 +40,8 @@ public sealed class AzureBlobContentStore : ILargeHttpCacheContentStore
         string contentKey, Stream content, long contentLength, IEnumerable<string>? tags, CancellationToken ct)
     {
         var blob = _container.GetBlockBlobClient(GetBlobName(contentKey));
-        ArgumentNullException.ThrowIfNull(content);
-        ArgumentOutOfRangeException.ThrowIfNegative(contentLength);
+        Guard.NotNull(content);
+        Guard.NotNegative(contentLength);
         if (contentLength > (long)BlockSize * MaximumBlocks)
         {
             throw new ArgumentOutOfRangeException(nameof(contentLength), "The maximum body size is 195.3125 GiB.");
@@ -138,9 +138,9 @@ public sealed class AzureBlobContentStore : ILargeHttpCacheContentStore
 
     private string GetBlobName(string contentKey)
     {
-        ArgumentNullException.ThrowIfNull(contentKey);
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(contentKey));
-        return $"{_prefix}/{Convert.ToHexStringLower(hash)}";
+        Guard.NotNull(contentKey);
+        var hash = Hashing.Sha256(Encoding.UTF8.GetBytes(contentKey));
+        return $"{_prefix}/{Hashing.ToHex(hash, lowercase: true)}";
     }
 
     private static bool IsMissingBlob(RequestFailedException exception) =>

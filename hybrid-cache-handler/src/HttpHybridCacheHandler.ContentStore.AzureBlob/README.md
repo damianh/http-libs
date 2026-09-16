@@ -1,6 +1,7 @@
 # Azure Blob HTTP cache content store
 
-`DamianH.HttpHybridCacheHandler.ContentStore.AzureBlob` targets .NET 10 and uses the
+`DamianH.HttpHybridCacheHandler.ContentStore.AzureBlob` targets `net10.0`,
+`netstandard2.0`, and `net472` (.NET Framework 4.7.2+) and uses the
 official `Azure.Storage.Blobs` SDK (12.29.2). It depends on the independent
 ContentStore package, not the HTTP handler or HybridCache. Release tags use
 `cache-azureblob-v`. NativeAOT/trimming compatibility has **not** been validated.
@@ -30,9 +31,9 @@ services.AddHttpHybridCacheAzureBlobContentStore(
 // Or use the independent content-store contract directly:
 using var provider = services.BuildServiceProvider();
 var store = provider.GetRequiredService<ILargeHttpCacheContentStore>();
-using var input = new MemoryStream("example body"u8.ToArray());
+using var input = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("example body"));
 await store.WriteAsync("opaque-logical-key", input, input.Length, null, CancellationToken.None);
-await using var body = await store.OpenReadAsync("opaque-logical-key", CancellationToken.None);
+using var body = await store.OpenReadAsync("opaque-logical-key", CancellationToken.None);
 if (body is not null)
     await body.CopyToAsync(Stream.Null);
 ```

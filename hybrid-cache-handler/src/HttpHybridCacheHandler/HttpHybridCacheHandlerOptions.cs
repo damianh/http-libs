@@ -22,9 +22,9 @@ public class HttpHybridCacheHandlerOptions
 
     internal void ValidateSpooling()
     {
-        ArgumentOutOfRangeException.ThrowIfNegative(SpoolMemoryThreshold);
-        ArgumentOutOfRangeException.ThrowIfNegative(MaxSpoolDiskBytes);
-        ArgumentOutOfRangeException.ThrowIfNegative(MaxConcurrentDiskSpools);
+        Guard.NotNegative(SpoolMemoryThreshold);
+        Guard.NotNegative(MaxSpoolDiskBytes);
+        Guard.NotNegative(MaxConcurrentDiskSpools);
         if (SpoolDirectory is { Length: 0 })
         {
             throw new ArgumentException("The spool directory must not be empty.", nameof(SpoolDirectory));

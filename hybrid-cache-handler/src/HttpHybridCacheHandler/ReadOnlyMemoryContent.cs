@@ -25,7 +25,7 @@ internal sealed class ReadOnlyMemoryContent(ReadOnlyMemory<byte> content) : Http
     /// <summary>
     /// Stream implementation that reads from ReadOnlyMemory without allocating byte arrays.
     /// </summary>
-    private sealed class ReadOnlyMemoryStream(ReadOnlyMemory<byte> memory) : Stream
+    private sealed class ReadOnlyMemoryStream(ReadOnlyMemory<byte> memory) : CompatibleStream
     {
         private int _position;
 
@@ -71,7 +71,7 @@ internal sealed class ReadOnlyMemoryContent(ReadOnlyMemory<byte> content) : Http
                 _position += toRead;
             }
 
-            return ValueTask.FromResult(toRead);
+            return new ValueTask<int>(toRead);
         }
 
         public override long Seek(long offset, SeekOrigin origin)

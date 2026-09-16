@@ -28,7 +28,7 @@ internal sealed class ContentCache(HybridCache cache) : IHttpCacheContentStore
     {
         var payload = await cache.GetOrCreateAsync<byte[]?>(
             contentKey,
-            _ => ValueTask.FromResult<byte[]?>(null),
+            _ => new ValueTask<byte[]?>((byte[]?)null),
             cancellationToken: ct
         );
         return payload == null ? null : new MemoryStream(payload, writable: false);

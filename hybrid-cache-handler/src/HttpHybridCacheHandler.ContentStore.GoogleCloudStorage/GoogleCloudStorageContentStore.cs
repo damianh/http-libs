@@ -1,5 +1,5 @@
 using System.Net;
-using System.Security.Cryptography;
+using System.Net.Http;
 using System.Text;
 using Google;
 using Google.Cloud.Storage.V1;
@@ -19,14 +19,14 @@ public sealed class GoogleCloudStorageContentStore : ILargeHttpCacheContentStore
     /// <summary>Creates a store using an application-owned client and a snapshot of the options.</summary>
     public GoogleCloudStorageContentStore(StorageClient client, GoogleCloudStorageContentStoreOptions options)
     {
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(options);
-        ArgumentException.ThrowIfNullOrWhiteSpace(options.BucketName);
-        ArgumentNullException.ThrowIfNull(options.Prefix);
-        ArgumentOutOfRangeException.ThrowIfLessThan(options.DownloadBufferSize, 1024);
+        Guard.NotNull(client);
+        Guard.NotNull(options);
+        Guard.NotNullOrWhiteSpace(options.BucketName);
+        Guard.NotNull(options.Prefix);
+        Guard.NotLessThan(options.DownloadBufferSize, 1024);
         _client = client;
         _bucket = options.BucketName;
-        _prefix = options.Prefix.Length == 0 || options.Prefix.EndsWith('/') ? options.Prefix : options.Prefix + "/";
+        _prefix = options.Prefix.Length == 0 || options.Prefix.EndsWith("/", StringComparison.Ordinal) ? options.Prefix : options.Prefix + "/";
         _downloadBufferSize = options.DownloadBufferSize;
     }
 
@@ -35,8 +35,8 @@ public sealed class GoogleCloudStorageContentStore : ILargeHttpCacheContentStore
         IEnumerable<string>? tags, CancellationToken ct)
     {
         var name = ObjectName(contentKey);
-        ArgumentNullException.ThrowIfNull(content);
-        ArgumentOutOfRangeException.ThrowIfNegative(contentLength);
+        Guard.NotNull(content);
+        Guard.NotNegative(contentLength);
         if (!content.CanRead || !content.CanSeek)
         {
             throw new ArgumentException("The input stream must be readable and seekable.", nameof(content));
@@ -114,7 +114,7 @@ public sealed class GoogleCloudStorageContentStore : ILargeHttpCacheContentStore
 
     private string ObjectName(string contentKey)
     {
-        ArgumentNullException.ThrowIfNull(contentKey);
-        return _prefix + Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(contentKey)));
+        Guard.NotNull(contentKey);
+        return _prefix + Hashing.ToHex(Hashing.Sha256(Encoding.UTF8.GetBytes(contentKey)), lowercase: true);
     }
 }

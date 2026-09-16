@@ -69,13 +69,17 @@ jobs:
           if-no-files-found: ignore
 
   cache-conformance:
-    name: "RFC 9111 conformance: ${{ matrix.mode }} (${{ matrix.os }})"
+    name: "RFC 9111: ${{ matrix.framework }} / ${{ matrix.mode }} (${{ matrix.os }})"
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
+        framework: [net10.0, netstandard2.0, net472]
         mode: [default, filesystem]
+        exclude:
+          - os: ubuntu-latest
+            framework: net472
     permissions:
       contents: read
     timeout-minutes: 30
@@ -92,20 +96,32 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Verify result gates and IPC protocol
+        shell: pwsh
+        run: |
+          node --test hybrid-cache-handler/conformance/compare-results.test.mjs hybrid-cache-handler/conformance/worker-lifecycle.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet run --project hybrid-cache-handler/conformance/ConformanceProtocol.Tests/ConformanceProtocol.Tests.csproj --configuration Release
+          exit $LASTEXITCODE
+
       - name: Run RFC 9111 conformance suite (Linux)
         if: runner.os == 'Linux'
         shell: bash
-        run: bash hybrid-cache-handler/conformance/run-conformance.sh ${{ matrix.mode == 'filesystem' && '--file-system' || '' }}
+        run: bash hybrid-cache-handler/conformance/run-conformance.sh --framework ${{ matrix.framework }} ${{ matrix.mode == 'filesystem' && '--file-system' || '' }}
 
       - name: Run RFC 9111 conformance suite (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: .\hybrid-cache-handler\conformance\run-conformance.ps1 ${{ matrix.mode == 'filesystem' && '-FileSystem' || '' }}
+        run: .\hybrid-cache-handler\conformance\run-conformance.ps1 -Framework ${{ matrix.framework }} ${{ matrix.mode == 'filesystem' && '-FileSystem' || '' }}
 
       - name: Upload conformance results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: cache-conformance-results-${{ matrix.mode }}-${{ matrix.os }}
-          path: hybrid-cache-handler/conformance/results${{ matrix.mode == 'filesystem' && '-filesystem' || '' }}.json
+          name: cache-conformance-results-${{ matrix.framework }}-${{ matrix.mode }}-${{ matrix.os }}
+          path: |
+            hybrid-cache-handler/conformance/results-${{ matrix.framework }}-${{ matrix.mode }}.json
+            hybrid-cache-handler/conformance/${{ matrix.framework }}-${{ matrix.mode }}-*.log
+            hybrid-cache-handler/conformance/${{ matrix.framework }}-${{ matrix.mode }}-provenance.json
+            hybrid-cache-handler/conformance/worker-lifecycle.log
           if-no-files-found: ignore

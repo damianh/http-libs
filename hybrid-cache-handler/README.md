@@ -9,6 +9,7 @@ RFC 9111 compliant client-side HTTP caching for `HttpClient`, powered by .NET's 
 
 - [Features](#features)
 - [Installation](#installation)
+- [Framework compatibility](#framework-compatibility)
 - [Quick Start](#quick-start)
 - [Handler Pipeline Configuration](#handler-pipeline-configuration)
   - [Recommended Setup](#recommended-setup)
@@ -68,9 +69,89 @@ RFC 9111 compliant client-side HTTP caching for `HttpClient`, powered by .NET's 
 dotnet add package DamianH.HttpHybridCacheHandler
 ```
 
+## Framework compatibility
+
+All six packages ship `net10.0`, `netstandard2.0`, and `net472` assets:
+the handler, ContentStore contracts, and the Azure Blob, S3, Google Cloud Storage,
+and filesystem adapters. The .NET Standard build is a library asset, not an
+executable runtime. The existing samples, benchmarks, and YARP conformance host
+remain .NET 10 applications; the separate FileDistributedCache product is not
+part of this target expansion.
+
+NuGet restores target-appropriate dependency assemblies, including the older-target
+support packages for async interfaces, `TimeProvider`, memory, and diagnostics
+where required. .NET Framework applications should enable automatic binding
+redirect generation. Cloud adapters retain their existing SDK versions; check
+the SDK vendors' support policies as well as the library target.
+
+**Upstream dependency warning:** `Microsoft.Extensions.Caching.Hybrid` 10.8.0
+contains .NET Standard 2.0 and .NET Framework-compatible assemblies, but its
+`buildTransitive` targets explicitly warn that `net472` is unsupported and
+untested by that package and recommend .NET 8 or later. We do not suppress that
+warning. This repository's downstream compatibility coverage does not change
+Microsoft's support commitment.
+
+### Header representation
+
+- `net10.0` retains the `HttpHeaders.NonValidated` snapshot path.
+- `netstandard2.0` and `net472` use supported public header enumeration, preserving
+  the values and value boundaries that enumeration exposes. No reflection,
+  private runtime fields, serialized-header reparsing, or comma-joining workaround
+  is used.
+- The older-target builds can normalize casing, whitespace, dates, ETags, and
+  parsed value grouping, including duplicate parsed directives. Exact original
+  header representation is not guaranteed. The `netstandard2.0` build uses this
+  path **even when loaded on .NET 10**.
+- Standards-compliant freshness, privacy/no-store protection, validators, Vary,
+  invalidation, and streaming publication rules are intended to match. Malformed
+  headers may be rejected more conservatively: for example, Framework does not
+  normalize an `Expires` date ending in `UTC` to the required `GMT`, so the strict
+  date parser rejects it. Without another freshness rule, that response is not
+  considered fresh merely because the malformed date is in the future.
+
+### Compatibility validation
+
+The dedicated compatibility suite runs the `net10.0` baseline, explicitly forced
+`netstandard2.0` library assets on a .NET 10 host on Windows/Linux, and `net472`
+executables on Windows. It asserts `TargetFrameworkAttribute` on all six loaded
+assemblies, rather than assuming a modern test host selected older assets.
+Tests use an in-process origin and no new live cloud credentials.
+The default Microsoft HybridCache implementation and its default serializers are
+also exercised across independent DI containers sharing a `MemoryDistributedCache`
+backend. Those cases require actual L2 metadata/body reads, including Vary,
+validators, header-value boundaries, Age, and compressed/uncompressed content;
+they do not substitute a test HybridCache or custom metadata serializer.
+
+From the repository root:
+
+```bash
+dotnet run hybrid-cache-handler/build.cs -- test-compatibility-modern
+dotnet run hybrid-cache-handler/build.cs -- test-compatibility-standard
+# Windows only
+dotnet run hybrid-cache-handler/build.cs -- test-compatibility-framework
+# All six nupkgs: asset/dependency checks and package-only consumers
+dotnet run hybrid-cache-handler/build.cs -- check-packages
+```
+
+The Framework test executable targets 4.7.2, but Windows runners generally have
+an in-place .NET Framework 4.8 runtime. The suite reports the installed runtime;
+this is not a claim that an actual 4.7.2 runtime was tested. Package checks build
+all three consumer targets, run .NET 10 consumers on Windows/Linux and Framework
+consumers on Windows, and inspect the selected compile/runtime package assets.
+The .NET Standard consumer is build-only; the forced-asset test host provides
+its executable behavioral coverage. The RFC conformance matrix also exercises
+all three implementations in default HybridCache and filesystem modes; see
+[RFC 9111 Conformance Suite](#rfc-9111-conformance-suite).
+
+Development ContentStore prereleases can sort below the deliberately released
+dependency floor (`0.1.0`). In that case, the package checker repacks the identical
+contract binaries at the floor in a disposable, private feed for consumer testing.
+It does not rewrite the original release artifacts or suppress downgrade errors;
+release ContentStore at the declared floor before releasing its consumers.
+
 ## Quick Start
 
-### Basic Usage with Recommended Configuration
+### Basic Usage with Recommended Configuration (.NET 10)
 
 ```csharp
 var services = new ServiceCollection();
@@ -110,7 +191,8 @@ var response = await client.GetAsync("https://api.example.com/data");
 
 ### Recommended Setup
 
-**Always use `SocketsHttpHandler` with `AutomaticDecompression` enabled** (better performance, DNS refresh, and connection pooling than legacy `HttpClientHandler`):
+**On .NET 10, prefer `SocketsHttpHandler` with automatic decompression enabled**
+for explicit DNS refresh and connection-pool lifetime control:
 
 ```csharp
 .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
@@ -121,12 +203,31 @@ var response = await client.GetAsync("https://api.example.com/data");
 })
 ```
 
+**On .NET Framework 4.7.2, use `HttpClientHandler`:**
+
+```csharp
+services.AddHttpClient("MyClient")
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+    {
+        AutomaticDecompression =
+            DecompressionMethods.GZip | DecompressionMethods.Deflate
+    })
+    .AddHttpMessageHandler(sp => sp.GetRequiredService<HttpHybridCacheHandler>());
+```
+
+This example also uses APIs available to .NET Standard 2.0 consumers. Choose the
+primary handler for the application's actual runtime; .NET Standard itself is
+not a runtime. `SocketsHttpHandler` pooling options such as
+`PooledConnectionLifetime`, `PooledConnectionIdleTimeout`, and `ConnectTimeout`
+are not available on Framework's `HttpClientHandler`. Do not copy those options
+or `DecompressionMethods.All` into Framework-targeted code.
+
 ### AutomaticDecompression Explained
 
 **Two different compressions:**
 
 1. **Transport Compression** (Server → Client)
-   - Controlled by: `AutomaticDecompression` on `SocketsHttpHandler`
+   - Controlled by: `AutomaticDecompression` on the primary HTTP handler
    - Purpose: Reduce network bandwidth
    - Result: Handler receives **decompressed** content
 
@@ -203,15 +304,9 @@ new SocketsHttpHandler
 }
 ```
 
-**Wrong: Using legacy HttpClientHandler**
-```csharp
-new HttpClientHandler()  // Legacy, less efficient
-```
-
-**Correct: Use modern SocketsHttpHandler**
-```csharp
-new SocketsHttpHandler { /* ... */ }
-```
+**Choose a handler your application target supports.** `HttpClientHandler` with
+GZip/Deflate decompression is the Framework-compatible choice;
+`SocketsHttpHandler` is recommended for .NET 10 applications.
 
 **Wrong: Cache handler after Polly**
 ```csharp
@@ -355,6 +450,17 @@ Use a trusted private staging parent. Each spill owns a unique leased directory;
 cleanup releases completed spools and can reclaim abandoned leased directories
 without deleting a live owner's files. HTTP cache metadata remains the caller's
 HybridCache configuration responsibility.
+
+On Linux and macOS, the `netstandard2.0` and `net472` builds create these private
+staging directories through the native POSIX `mkdir` OS call (`libc`), passing a
+UTF-8 path and owner-only mode `0700`. The return code is checked; there is no
+fallback that creates a directory with weaker permissions or narrows permissions
+after response data is written. This native call does not inspect runtime internals.
+The `net10.0` build retains managed `Directory.CreateDirectory` with
+`UnixFileMode`. On Windows, directory creation uses the managed API and the trusted
+parent's ACLs. Other operating systems are not supported for older-target disk
+spooling. These are implementation/platform requirements, not claims of completed
+macOS or actual Framework 4.7.2 runtime testing.
 
 Configure cloud lifecycle policies for cached objects and incomplete uploads, and configure
 age/size cleanup for filesystem storage. Retention is not HTTP freshness: a deleted body
@@ -508,29 +614,52 @@ dotnet run --project benchmarks/Benchmarks/Benchmarks.csproj -c Release
 The handler is tested against [http-tests/cache-tests](https://github.com/http-tests/cache-tests)
 (the HTTP caching test suite behind [cache-tests.fyi](https://cache-tests.fyi), used to assess
 browsers, proxies and CDNs). The suite's client sends scripted requests through a minimal YARP
-reverse proxy (`conformance/ConformanceProxy`) that uses `HttpHybridCacheHandler` in `Shared` mode.
+reverse proxy that uses `HttpHybridCacheHandler` in `Shared` mode. All three
+implementation targets run in both default HybridCache and streaming filesystem
+modes. The `net10.0` and explicitly selected `netstandard2.0` assemblies run directly
+in .NET 10 hosts. The `net472` assemblies run in a separate .NET Framework worker
+behind the same modern front-end, not on modern .NET. Startup checks the loaded
+assembly targets and records the actual runtime.
 
 Run it locally:
 
-```bash
+```powershell
 # Windows
-./hybrid-cache-handler/conformance/run-conformance.ps1
+.\hybrid-cache-handler\conformance\run-conformance.ps1 -Framework net10.0
+.\hybrid-cache-handler\conformance\run-conformance.ps1 -Framework netstandard2.0 -FileSystem
+.\hybrid-cache-handler\conformance\run-conformance.ps1 -Framework net472 -FileSystem
+```
 
+```bash
 # Linux/macOS
-./hybrid-cache-handler/conformance/run-conformance.sh
+./hybrid-cache-handler/conformance/run-conformance.sh --framework netstandard2.0 --file-system
 ```
 
 The script clones the suite (pinned commit), starts the suite's origin server and the proxy, runs
-the full suite and compares `results.json` against the checked-in `expected-results.json` baseline.
-It fails only on regressions (a test that passed in the baseline now failing). Passing every test
-is not a goal — the suite itself documents that full passes are not expected; it measures behavior,
-including optional optimizations.
+the full suite and compares `results-<framework>-<default|filesystem>.json` against
+the unchanged `expected-results.json` baseline. Missing fixtures and regressions
+from previously passing fixtures fail the run. Legacy targets have reviewed,
+exact header-formatting exceptions in `legacy-expectations.json`; these do not
+inflate raw pass counts or apply to modern runs. Known baseline failures remain
+visible. Passing every fixture is not a goal: the suite also measures optional
+optimizations, and these runs are not a conformance certification.
 
-- Debug a single test: `./run-conformance.ps1 -TestId <test-id>`
-- After a fix adds new passes: `./run-conformance.ps1 -Update` (or `run-conformance.sh --update`)
-  to ratchet the baseline, then commit `expected-results.json`.
+Each of the six local Windows runs executed 365 fixtures: 344 raw passes per
+modern mode and 324 per legacy mode, with no unaccepted baseline regressions.
+Framework execution used .NET Framework 4.8, not an actual 4.7.2 runtime.
+HybridCache's upstream `net472` unsupported/untested warning remains applicable.
 
-The `cache-conformance` CI job runs this on every push/PR and uploads `results.json` as an artifact.
+- Debug a single fixture: `.\run-conformance.ps1 -Framework net472 -TestId <test-id>`
+  (diagnostics only, not a full-suite gate).
+- After reviewing new passes from a full modern run, use `.\run-conformance.ps1 -Update`
+  (or `run-conformance.sh --update`) to ratchet the baseline.
+
+The `cache-conformance` CI matrix covers all six Windows combinations and the four
+modern/Standard Linux combinations. Each cell uploads target/mode-qualified
+results, runtime/assembly provenance, and build/origin/proxy/client/comparison logs.
+Linux execution is configured in CI but was not verified locally.
+See the [conformance harness documentation](conformance/README.md) for prerequisites,
+IPC fidelity and lifecycle checks, and exact result-gating rules.
 
 ## Samples
 

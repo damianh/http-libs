@@ -114,7 +114,11 @@ public static class ServiceCollectionExtensions
         /// Registers the optional content store used for large cached responses.
         /// </summary>
         public IServiceCollection AddHttpHybridCacheLargeContentStore<
+#if NET10_0_OR_GREATER
             [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TStore>()
+#else
+            TStore>()
+#endif
             where TStore : class, ILargeHttpCacheContentStore
         {
             serviceCollection.TryAddSingleton<TStore>();

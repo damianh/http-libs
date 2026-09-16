@@ -2,7 +2,7 @@ using System.IO.Pipelines;
 
 namespace DamianH.HttpHybridCacheHandler;
 
-internal sealed class DownloadReadStream : Stream
+internal sealed class DownloadReadStream : CompatibleStream
 {
     private readonly Pipe _pipe;
     private readonly Stream _reader;
@@ -18,7 +18,7 @@ internal sealed class DownloadReadStream : Stream
             resumeWriterThreshold: bufferSize / 2,
             useSynchronizationContext: false));
         _reader = _pipe.Reader.AsStream(leaveOpen: true);
-        _lifetime = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        _lifetime = CancellationTokenSource.CreateLinkedTokenSource(ct, CancellationToken.None);
         // The owned task also isolates synchronous SDK/custom-client writes from the opening caller.
         _producer = Task.Run(() => ProduceAsync(download));
     }
@@ -53,7 +53,7 @@ internal sealed class DownloadReadStream : Stream
 
     public override int Read(Span<byte> buffer)
     {
-        ObjectDisposedException.ThrowIf(_disposeTask is not null, this);
+        Guard.NotDisposed(_disposeTask is not null, this);
         _lifetime.Token.ThrowIfCancellationRequested();
         return _reader.Read(buffer);
     }
@@ -63,9 +63,13 @@ internal sealed class DownloadReadStream : Stream
 
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposeTask is not null, this);
+        Guard.NotDisposed(_disposeTask is not null, this);
         _lifetime.Token.ThrowIfCancellationRequested();
+#if NETSTANDARD2_0 || NETFRAMEWORK
+        using var registration = cancellationToken.Register(
+#else
         using var registration = cancellationToken.UnsafeRegister(
+#endif
             static state => ((CancellationTokenSource)state!).Cancel(), _lifetime);
         return await _reader.ReadAsync(buffer, _lifetime.Token).ConfigureAwait(false);
     }
@@ -99,7 +103,11 @@ internal sealed class DownloadReadStream : Stream
         {
             try
             {
+#if NETSTANDARD2_0 || NETFRAMEWORK
+                _lifetime.Cancel();
+#else
                 await _lifetime.CancelAsync().ConfigureAwait(false);
+#endif
             }
             finally
             {
@@ -129,7 +137,7 @@ internal sealed class DownloadReadStream : Stream
 
 // Split arbitrary SDK writes before flushing: PipeWriter.AsStream alone permits an unbounded
 // single write to exceed the pause threshold before backpressure can take effect.
-internal sealed class DownloadDestinationStream(PipeWriter writer, CancellationToken lifetime) : Stream
+internal sealed class DownloadDestinationStream(PipeWriter writer, CancellationToken lifetime) : CompatibleStream
 {
     private const int MaximumWriteSize = 16 * 1024;
     public override bool CanRead => false;

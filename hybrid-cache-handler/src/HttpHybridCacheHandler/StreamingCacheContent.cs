@@ -5,7 +5,7 @@ using System.Net;
 
 namespace DamianH.HttpHybridCacheHandler;
 
-internal sealed class StreamingCacheContent : HttpContent
+internal sealed class StreamingCacheContent : CompatibleHttpContent
 {
     private readonly HttpContent _origin;
     private readonly long? _length;
@@ -92,7 +92,7 @@ internal sealed class StreamingCacheContent : HttpContent
 
     private sealed class TeeStream(Stream origin, long? expectedLength, HttpHybridCacheHandlerOptions options,
         Ct requestCancellation, Func<AdaptiveSpool, Ct, Task> complete, Action<Exception> log,
-        Action disposeOrigin, Action releaseFill, Action sizeExceeded) : Stream
+        Action disposeOrigin, Action releaseFill, Action sizeExceeded) : CompatibleStream
     {
         private AdaptiveSpool? _spool = new(options, log);
         private long _read;
@@ -130,7 +130,7 @@ internal sealed class StreamingCacheContent : HttpContent
 
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, Ct ct = default)
         {
-            ObjectDisposedException.ThrowIf(_disposed, this);
+            Guard.NotDisposed(_disposed, this);
             if (buffer.IsEmpty || _eof)
             {
                 return 0;

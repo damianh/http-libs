@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+using System.Net.Http;
 using System.Text;
 using Amazon.S3;
 using Amazon.S3.Model;
@@ -24,11 +24,11 @@ public sealed class S3ContentStore : ILargeHttpCacheContentStore
     /// <summary>Creates a store. The injected client remains owned by the application.</summary>
     public S3ContentStore(IAmazonS3 client, IOptions<S3ContentStoreOptions> options)
     {
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(options);
+        Guard.NotNull(client);
+        Guard.NotNull(options);
         var value = options.Value;
-        ArgumentException.ThrowIfNullOrWhiteSpace(value.BucketName);
-        ArgumentNullException.ThrowIfNull(value.KeyPrefix);
+        Guard.NotNullOrWhiteSpace(value.BucketName);
+        Guard.NotNull(value.KeyPrefix);
         if (Encoding.UTF8.GetByteCount(value.KeyPrefix) > 1024 - 64)
             throw new ArgumentException("The prefix plus the SHA-256 key must fit S3's 1024-byte key limit.", nameof(options));
         if (value.MultipartThreshold is < 1 or > SinglePutLimit)
@@ -53,8 +53,8 @@ public sealed class S3ContentStore : ILargeHttpCacheContentStore
         string contentKey, Stream content, long contentLength, IEnumerable<string>? tags, CancellationToken ct)
     {
         var key = GetKey(contentKey);
-        ArgumentNullException.ThrowIfNull(content);
-        ArgumentOutOfRangeException.ThrowIfNegative(contentLength);
+        Guard.NotNull(content);
+        Guard.NotNegative(contentLength);
         if (contentLength > MaximumObjectSize)
             throw new ArgumentOutOfRangeException(nameof(contentLength), "S3 supports at most 10,000 parts of 5 GiB each.");
         if (!content.CanRead || !content.CanSeek)
@@ -211,7 +211,7 @@ public sealed class S3ContentStore : ILargeHttpCacheContentStore
 
     private string GetKey(string contentKey)
     {
-        ArgumentNullException.ThrowIfNull(contentKey);
-        return _prefix + Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(contentKey)));
+        Guard.NotNull(contentKey);
+        return _prefix + Hashing.ToHex(Hashing.Sha256(Encoding.UTF8.GetBytes(contentKey)), lowercase: true);
     }
 }

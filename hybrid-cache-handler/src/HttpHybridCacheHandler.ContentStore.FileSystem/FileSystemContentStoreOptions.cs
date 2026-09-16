@@ -17,7 +17,7 @@ public sealed class FileSystemContentStoreOptions
 
     internal void Validate()
     {
-        if (string.IsNullOrWhiteSpace(RootDirectory) || !Path.IsPathFullyQualified(RootDirectory))
+        if (string.IsNullOrWhiteSpace(RootDirectory) || !IsPathFullyQualified(RootDirectory))
         {
             throw new ArgumentException("An absolute, dedicated RootDirectory is required.", nameof(RootDirectory));
         }
@@ -36,5 +36,22 @@ public sealed class FileSystemContentStoreOptions
         {
             throw new ArgumentOutOfRangeException(nameof(CleanupInterval));
         }
+    }
+
+    private static bool IsPathFullyQualified(string path)
+    {
+#if NETSTANDARD2_0 || NETFRAMEWORK
+        if (Path.DirectorySeparatorChar == '/')
+        {
+            return path[0] == '/';
+        }
+
+        static bool IsSeparator(char value) => value is '\\' or '/';
+        return path.Length >= 2 && IsSeparator(path[0]) && IsSeparator(path[1])
+            || path.Length >= 3 && path[0] is (>= 'a' and <= 'z') or (>= 'A' and <= 'Z')
+                && path[1] == ':' && IsSeparator(path[2]);
+#else
+        return Path.IsPathFullyQualified(path);
+#endif
     }
 }

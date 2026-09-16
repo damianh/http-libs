@@ -1,6 +1,7 @@
 # Google Cloud Storage HTTP cache content store
 
-`DamianH.HttpHybridCacheHandler.ContentStore.GoogleCloudStorage` targets .NET 10
+`DamianH.HttpHybridCacheHandler.ContentStore.GoogleCloudStorage` targets `net10.0`,
+`netstandard2.0`, and `net472` (.NET Framework 4.7.2+)
 and uses the official `Google.Cloud.Storage.V1` **4.15.0** SDK. It depends on the
 content-store abstractions, not the HTTP handler. Its independent release tag
 prefix is `cache-gcs-v`.
@@ -56,6 +57,8 @@ credentials, retry settings, access controls, or lifecycle rules.
   Bytes may already have reached the caller when a checksum or network error is
   reported. There is no transparent origin fallback after partial delivery.
 - **Always dispose the returned stream**, preferably with `await using`.
+  On .NET Framework/.NET Standard 2.0, use `using` on the returned `Stream`,
+  or cast it to `IAsyncDisposable` to await disposal.
   Disposal cancels and joins the owned producer; synchronous disposal may block
   until SDK cancellation completes. The opening cancellation token remains
   active for the stream lifetime. Cancelling a read also cancels the download.

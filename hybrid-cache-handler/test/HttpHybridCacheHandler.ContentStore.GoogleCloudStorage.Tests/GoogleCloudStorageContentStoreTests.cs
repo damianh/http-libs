@@ -431,6 +431,70 @@ public class GoogleCloudStorageContentStoreTests
         stream.ReadByte().ShouldBe(-1);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ArrayWritesAndReadsPreserveOffsetsAndBackpressure(bool synchronous)
+    {
+        var bytes = new byte[256 * 1024 + 2];
+        new Random(42).NextBytes(bytes);
+        var client = DownloadClient(async (destination, ct) =>
+        {
+            if (synchronous)
+            {
+                destination.Write(bytes, 1, bytes.Length - 2);
+            }
+            else
+            {
+                await destination.WriteAsync(bytes, 1, bytes.Length - 2, ct);
+            }
+        });
+        using var stream = (await Create(client).OpenReadAsync("key", CancellationToken.None))!;
+        using var output = new MemoryStream();
+        var buffer = new byte[4098];
+        buffer[0] = buffer[^1] = 99;
+        int count;
+        while ((count = synchronous
+            ? stream.Read(buffer, 1, buffer.Length - 2)
+            : await stream.ReadAsync(buffer, 1, buffer.Length - 2, TestContext.Current.CancellationToken)) != 0)
+        {
+            output.Write(buffer, 1, count);
+        }
+        buffer[0].ShouldBe((byte)99);
+        buffer[^1].ShouldBe((byte)99);
+        output.ToArray().ShouldBe(bytes[1..^1]);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ArrayUploadReadsSupportRewindingAndKeepSourceOpen(bool synchronous)
+    {
+        var client = new FakeStorageClient
+        {
+            Upload = async (source, ct) =>
+            {
+                source.Length.ShouldBe(3);
+                var buffer = new byte[] { 99, 99, 99, 99, 99 };
+                for (var attempt = 0; attempt < 2; attempt++)
+                {
+                    source.Seek(0, SeekOrigin.Begin).ShouldBe(0);
+                    var count = synchronous
+                        ? source.Read(buffer, 1, 3)
+                        : await source.ReadAsync(buffer, 1, 3, ct);
+                    count.ShouldBe(3);
+                    buffer.ShouldBe(new byte[] { 99, 1, 2, 3, 99 });
+                    (await source.ReadAsync(buffer, 1, 3, ct)).ShouldBe(0);
+                }
+                return buffer[1..^1];
+            }
+        };
+        using var input = new MemoryStream([0, 0, 1, 2, 3]) { Position = 2 };
+        await Create(client).WriteAsync("key", input, 3, null, TestContext.Current.CancellationToken);
+        input.CanRead.ShouldBeTrue();
+        client.Objects.Single().Value.ShouldBe(new byte[] { 1, 2, 3 });
+    }
+
     [Fact]
     public void DependencyInjectionUsesRegisteredClientAndValidatedOptions()
     {
@@ -491,6 +555,7 @@ public class GoogleCloudStorageContentStoreTests
         public int MetadataCalls { get; private set; }
         public int DownloadCalls { get; private set; }
         public Func<Stream, CancellationToken, Task>? Download { get; init; }
+        public Func<Stream, CancellationToken, Task<byte[]>>? Upload { get; init; }
         public Func<CancellationToken, Task>? BeforeUpload { get; init; }
 
         public override Task<StorageObject> GetObjectAsync(string bucket, string objectName,
@@ -522,7 +587,14 @@ public class GoogleCloudStorageContentStoreTests
             UploadSourceInitialPosition = source.Position;
             if (BeforeUpload is not null) await BeforeUpload(cancellationToken);
             using var bytes = new MemoryStream();
-            await source.CopyToAsync(bytes, cancellationToken);
+            if (Upload is not null)
+            {
+                bytes.Write(await Upload(source, cancellationToken));
+            }
+            else
+            {
+                await source.CopyToAsync(bytes, cancellationToken);
+            }
             if (DisposeUploadSource) source.Dispose();
             if (UploadError is not null) throw UploadError;
             Objects[destination.Name] = bytes.ToArray();

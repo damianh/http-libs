@@ -5,7 +5,7 @@
     <MinVerMinimumMajorMinor>0.1</MinVerMinimumMajorMinor>
     <MinVerTagPrefix>cache-contentstore-v</MinVerTagPrefix>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <IsAotCompatible>true</IsAotCompatible>
+    <IsAotCompatible Condition="'$(TargetFramework)' == 'net10.0'">true</IsAotCompatible>
     <PackageId>DamianH.HttpHybridCacheHandler.ContentStore</PackageId>
     <Authors>Damian Hickey</Authors>
     <Description>Provider-independent streaming HTTP cache content-store contracts.</Description>

@@ -6,17 +6,25 @@ copies. It depends on the abstractions and Microsoft extensions, not on the
 handler or `FileDistributedCache`. It is independently versioned using
 `cache-filesystem-v` tags.
 
+Targets are `net10.0`, `netstandard2.0`, and `net472` (.NET Framework 4.7.2+).
+Retention uses the supplied `TimeProvider` on every target, including fake clocks.
+Legacy targets use a coalescing periodic timer built on `TimeProvider.CreateTimer`;
+disposal cancels and joins cleanup just as on .NET 10.
+
 ## Registration with bounded retention
 
 ```csharp
 using DamianH.HttpHybridCacheHandler.ContentStore.FileSystem;
+using System.Diagnostics;
 
+using var process = Process.GetCurrentProcess();
+var processId = process.Id.ToString();
 services.AddHttpHybridCacheFileSystemContentStore(options =>
 {
     // Supply an absolute, private, dedicated directory for THIS process.
     options.RootDirectory = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "MyApp", "http-bodies", Environment.ProcessId.ToString());
+        "MyApp", "http-bodies", processId);
     options.MaximumAge = TimeSpan.FromDays(7);
     options.MaximumTotalBytes = 10L * 1024 * 1024 * 1024; // soft 10 GiB
     options.CleanupInterval = TimeSpan.FromMinutes(5);

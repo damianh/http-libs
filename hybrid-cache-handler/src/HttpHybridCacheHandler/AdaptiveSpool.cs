@@ -8,7 +8,7 @@ namespace DamianH.HttpHybridCacheHandler;
 internal sealed class SpoolBudgetExceededException() : IOException("The HTTP cache staging budget was exhausted.");
 
 /// <summary>A completed spool is seekable and caller-owned, as required by content stores.</summary>
-internal sealed class AdaptiveSpool(HttpHybridCacheHandlerOptions options, Action<Exception> log) : Stream
+internal sealed class AdaptiveSpool(HttpHybridCacheHandlerOptions options, Action<Exception> log) : CompatibleStream
 {
     private static readonly object BudgetLock = new();
     private static long _diskBytes;
@@ -22,7 +22,7 @@ internal sealed class AdaptiveSpool(HttpHybridCacheHandlerOptions options, Actio
     private bool _diskReserved;
     private bool _disposed;
 
-    public string FinishHash() => Convert.ToHexString(_hash.GetHashAndReset());
+    public string FinishHash() => Hashing.ToHex(_hash.GetHashAndReset());
     public override bool CanRead => !_disposed;
     public override bool CanSeek => !_disposed;
     public override bool CanWrite => !_disposed;
@@ -38,7 +38,7 @@ internal sealed class AdaptiveSpool(HttpHybridCacheHandlerOptions options, Actio
 
     private void Reserve(int count)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        Guard.NotDisposed(_disposed, this);
         if (!_diskReserved && Length + count <= options.SpoolMemoryThreshold)
         {
             // MemoryStream's geometric growth must not exceed the configured ceiling.
@@ -103,15 +103,9 @@ internal sealed class AdaptiveSpool(HttpHybridCacheHandlerOptions options, Actio
                 }
             }
         }
-        _directory = Path.Combine(root, $"httpcache-spool-{Guid.NewGuid():N}");
-        if (OperatingSystem.IsWindows())
-        {
-            Directory.CreateDirectory(_directory);
-        }
-        else
-        {
-            Directory.CreateDirectory(_directory, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
-        }
+        var directoryPath = Path.Combine(root, $"httpcache-spool-{Guid.NewGuid():N}");
+        PrivateDirectory.Create(directoryPath);
+        _directory = directoryPath;
         _lease = new FileStream(Path.Combine(_directory, "lease"), FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None);
         var disk = new FileStream(Path.Combine(_directory, "body"), FileMode.CreateNew, FileAccess.ReadWrite,
             FileShare.None, 64 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan | FileOptions.DeleteOnClose);
@@ -134,7 +128,7 @@ internal sealed class AdaptiveSpool(HttpHybridCacheHandlerOptions options, Actio
     {
         Reserve(buffer.Length);
         _stream.Write(buffer);
-        _hash.AppendData(buffer);
+        AppendHash(buffer);
     }
 
     public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, Ct ct = default)
@@ -142,8 +136,37 @@ internal sealed class AdaptiveSpool(HttpHybridCacheHandlerOptions options, Actio
         ct.ThrowIfCancellationRequested();
         Reserve(buffer.Length);
         await _stream.WriteAsync(buffer, ct);
-        _hash.AppendData(buffer.Span);
+        AppendHash(buffer.Span);
     }
+
+    private void AppendHash(ReadOnlySpan<byte> buffer)
+    {
+#if NET10_0_OR_GREATER
+        _hash.AppendData(buffer);
+#else
+        var rented = System.Buffers.ArrayPool<byte>.Shared.Rent(Math.Min(buffer.Length, 64 * 1024));
+        try
+        {
+            while (!buffer.IsEmpty)
+            {
+                var count = Math.Min(buffer.Length, rented.Length);
+                buffer.Slice(0, count).CopyTo(rented);
+                _hash.AppendData(rented, 0, count);
+                buffer = buffer.Slice(count);
+            }
+        }
+        finally
+        {
+            System.Buffers.ArrayPool<byte>.Shared.Return(rented);
+        }
+#endif
+    }
+
+    public override Task<int> ReadAsync(byte[] buffer, int offset, int count, Ct ct) =>
+        _stream.ReadAsync(buffer, offset, count, ct);
+
+    public override Task WriteAsync(byte[] buffer, int offset, int count, Ct ct) =>
+        WriteAsync(buffer.AsMemory(offset, count), ct).AsTask();
 
     protected override void Dispose(bool disposing)
     {

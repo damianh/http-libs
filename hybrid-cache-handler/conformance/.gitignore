@@ -2,3 +2,5 @@
 .content-store-*/
 results*.json
 cli-stderr.txt
+*.log
+*-provenance.json

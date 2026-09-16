@@ -1,0 +1,31 @@
+{
+  "frameworks": ["netstandard2.0", "net472"],
+  "reason": "Legacy public HttpHeaders enumeration serializes parsed headers. These exact differences only normalize Cache-Control directive order/case or Content-Type optional whitespace; they do not change directive values. Raw outcomes remain visible. Most origin-header equality checks follow the request sequence, but explicit header assertions can stop a fixture before later assertions.",
+  "cases": {
+    "cc-resp-must-revalidate-fresh": ["Setup", "Response 1 header Cache-Control is \"must-revalidate, max-age=10000\", not \"max-age=10000, must-revalidate\""],
+    "cc-resp-must-revalidate-stale": ["Setup", "Response 1 header Cache-Control is \"must-revalidate, max-age=2\", not \"max-age=2, must-revalidate\""],
+    "cc-resp-no-cache": ["Setup", "Response 1 header Cache-Control is \"no-cache, max-age=10000\", not \"max-age=10000, no-cache\""],
+    "cc-resp-no-cache-case-insensitive": ["Setup", "Response 1 header Cache-Control is \"no-cache, max-age=10000\", not \"max-age=10000, No-CaChE\""],
+    "cc-resp-no-cache-revalidate-fresh": ["Setup", "Response 1 header Cache-Control is \"no-cache, max-age=10000\", not \"max-age=10000, no-cache\""],
+    "cc-resp-no-store-case-insensitive": ["Setup", "Response 1 header Cache-Control is \"no-store\", not \"No-StOrE\""],
+    "cc-resp-no-store-fresh": ["Setup", "Response 1 header Cache-Control is \"no-store, max-age=10000\", not \"max-age=10000, no-store\""],
+    "cc-resp-private-shared": ["Setup", "Response 1 header Cache-Control is \"max-age=3600, private\", not \"private, max-age=3600\""],
+    "freshness-max-age-case-insenstive": ["Setup", "Response 1 header Cache-Control is \"max-age=3600\", not \"MaX-aGe=3600\""],
+    "freshness-max-age-extension": ["Setup", "Response 1 header Cache-Control is \"max-age=3600, foobar\", not \"foobar, max-age=3600\""],
+    "freshness-max-age-s-maxage-shared-longer-reversed": ["Setup", "Response 1 header Cache-Control is \"max-age=3600, s-maxage=1\", not \"s-maxage=1, max-age=3600\""],
+    "other-authorization-public": ["Setup", "Response 1 header Cache-Control is \"public, max-age=3600\", not \"max-age=3600, public\""],
+    "stale-close-must-revalidate": ["Setup", "Response 1 header Cache-Control is \"must-revalidate, max-age=2\", not \"max-age=2, must-revalidate\""],
+    "stale-close-no-cache": ["Setup", "Response 1 header Cache-Control is \"no-cache, max-age=2\", not \"max-age=2, no-cache\""],
+    "stale-close-proxy-revalidate": ["Setup", "Response 1 header Cache-Control is \"proxy-revalidate, max-age=2\", not \"max-age=2, proxy-revalidate\""],
+    "status-599-must-understand": ["Setup", "Response 1 header Cache-Control is \"no-store, max-age=3600, must-understand\", not \"max-age=3600, no-store, must-understand\""]
+  },
+  "frameworkCases": {
+    "netstandard2.0": {
+      "headers-store-Content-Type": ["Setup", "Response 1 header Content-Type is \"text/plain; charset=utf-8\", not \"text/plain;charset=utf-8\""]
+    },
+    "net472": {
+      "headers-store-Content-Type": ["Assertion", "Response 2 header Content-Type is \"text/plain; charset=utf-8\", not \"text/plain;charset=utf-8\""],
+      "304-etag-update-response-Content-Type": ["Assertion", "Response 2 header Content-Type is \"text/plain; charset=utf-8\", not \"text/plain;charset=utf-8\""]
+    }
+  }
+}

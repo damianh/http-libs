@@ -14,8 +14,8 @@ public static class FileSystemContentStoreServiceCollectionExtensions
         this IServiceCollection services,
         Action<FileSystemContentStoreOptions> configure)
     {
-        ArgumentNullException.ThrowIfNull(services);
-        ArgumentNullException.ThrowIfNull(configure);
+        Guard.NotNull(services);
+        Guard.NotNull(configure);
         services.Configure(configure);
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<ILargeHttpCacheContentStore>(provider => new FileSystemContentStore(
