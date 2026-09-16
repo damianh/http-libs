@@ -22,4 +22,8 @@
     <PackageReference Include="MinVer" Version="7.0.0" PrivateAssets="all" />
     <ProjectReference Include="..\HttpHybridCacheHandler.ContentStore\HttpHybridCacheHandler.ContentStore.csproj" />
   </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' != 'net10.0'">
+    <PackageReference Include="System.Memory" Version="4.6.3" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.10" />
+  </ItemGroup>
 </Project>

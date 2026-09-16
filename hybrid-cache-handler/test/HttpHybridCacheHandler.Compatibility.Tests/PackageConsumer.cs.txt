@@ -1,0 +1,62 @@
+using System;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Reflection;
+using System.Runtime.Versioning;
+using System.Threading;
+using System.Threading.Tasks;
+using DamianH.HttpHybridCacheHandler;
+using DamianH.HttpHybridCacheHandler.ContentStore.AzureBlob;
+using DamianH.HttpHybridCacheHandler.ContentStore.FileSystem;
+using Microsoft.Extensions.DependencyInjection;
+
+internal static class Program
+{
+    public static async Task Main()
+    {
+#if NET472
+        const string expected = ".NETFramework,Version=v4.7.2";
+#elif NETSTANDARD2_0
+        const string expected = ".NETStandard,Version=v2.0";
+#else
+        const string expected = ".NETCoreApp,Version=v10.0";
+#endif
+        foreach (var type in new[] { typeof(HttpHybridCacheHandler), typeof(IHttpCacheContentStore),
+            typeof(AzureBlobContentStore), typeof(S3ContentStore), typeof(GoogleCloudStorageContentStore), typeof(FileSystemContentStore) })
+        {
+            var actual = type.Assembly.GetCustomAttribute<TargetFrameworkAttribute>()?.FrameworkName;
+            if (actual != expected) throw new InvalidOperationException(type.Name + " selected " + actual + ", expected " + expected);
+            Console.WriteLine(type.Assembly.GetName().Name + ": " + actual);
+        }
+        using (var origin = new Origin())
+        using (var services = new ServiceCollection().AddLogging().AddHttpHybridCacheHandler(_ => { })
+            .AddHttpClient("consumer").ConfigurePrimaryHttpMessageHandler(() => origin)
+            .AddHttpMessageHandler(sp => sp.GetRequiredService<HttpHybridCacheHandler>())
+            .Services.BuildServiceProvider())
+        using (var client = services.GetRequiredService<IHttpClientFactory>().CreateClient("consumer"))
+        {
+            for (var i = 0; i < 2; i++)
+            {
+                using (var response = await client.GetAsync("https://package.example.test/item"))
+                {
+                    if (await response.Content.ReadAsStringAsync() != "package body") throw new InvalidOperationException("Corrupt body");
+                }
+            }
+            if (origin.Calls != 1) throw new InvalidOperationException("Package consumer did not cache the response");
+        }
+        Console.WriteLine("Package consumption passed on " + System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription);
+    }
+
+    private sealed class Origin : HttpMessageHandler
+    {
+        public int Calls;
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            Calls++;
+            var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("package body") };
+            response.Headers.CacheControl = new CacheControlHeaderValue { MaxAge = TimeSpan.FromHours(1) };
+            return Task.FromResult(response);
+        }
+    }
+}

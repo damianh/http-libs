@@ -13,7 +13,7 @@ public static class AzureBlobContentStoreServiceCollectionExtensions
     public static IServiceCollection AddHttpHybridCacheAzureBlobContentStore(
         this IServiceCollection services, Action<AzureBlobContentStoreOptions>? configure = null)
     {
-        ArgumentNullException.ThrowIfNull(services);
+        Guard.NotNull(services);
         var options = new AzureBlobContentStoreOptions();
         configure?.Invoke(options);
         services.AddSingleton<ILargeHttpCacheContentStore>(provider =>

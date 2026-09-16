@@ -14,8 +14,8 @@ public static class GoogleCloudStorageContentStoreServiceCollectionExtensions
         this IServiceCollection services,
         Action<GoogleCloudStorageContentStoreOptions> configure)
     {
-        ArgumentNullException.ThrowIfNull(services);
-        ArgumentNullException.ThrowIfNull(configure);
+        Guard.NotNull(services);
+        Guard.NotNull(configure);
         services.AddOptions<GoogleCloudStorageContentStoreOptions>().Configure(configure);
         services.AddSingleton<ILargeHttpCacheContentStore>(provider =>
             new GoogleCloudStorageContentStore(

@@ -61,10 +61,19 @@ public class S3ContentStoreTests
         Assert.Equal(2, client.Deletes);
     }
 
-    [Fact]
-    public async Task Starts_at_current_position_and_retries_each_part_without_crossing_boundaries()
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task Starts_at_current_position_and_retries_each_part_without_crossing_boundaries(
+        bool arrayReads, bool synchronousReads)
     {
-        using var client = new TestS3Client { RewindParts = true };
+        using var client = new TestS3Client
+        {
+            RewindParts = true,
+            ArrayReads = arrayReads,
+            SynchronousReads = synchronousReads
+        };
         var bytes = new byte[5 * MiB + 99];
         new Random(7).NextBytes(bytes);
         using var input = new TrackingStream(bytes) { Position = 17 };
@@ -72,6 +81,31 @@ public class S3ContentStoreTests
         await store.WriteAsync("key", input, bytes.Length - 17, null, TestContext.Current.CancellationToken);
         Assert.Equal(bytes[17..], Assert.Single(client.Objects).Value);
         Assert.False(input.Disposed);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Array_reads_preserve_offsets_and_dispose_the_response(bool synchronous)
+    {
+        using var client = new TestS3Client { ArrayReads = true, SynchronousReads = synchronous };
+        var store = Create(client);
+        using var source = new MemoryStream([0, 1, 2, 3]) { Position = 1 };
+        await store.WriteAsync("key", source, 3, null, TestContext.Current.CancellationToken);
+        var response = await store.OpenReadAsync("key", TestContext.Current.CancellationToken);
+        Assert.NotNull(response);
+        using (response)
+        {
+            var buffer = new byte[] { 99, 99, 99, 99, 99 };
+            var read = synchronous
+                ? response.Read(buffer, 1, 3)
+                : await response.ReadAsync(buffer, 1, 3, TestContext.Current.CancellationToken);
+            Assert.Equal(3, read);
+            Assert.Equal(new byte[] { 99, 1, 2, 3, 99 }, buffer);
+            Assert.Equal(0, await response.ReadAsync(buffer, 1, 3, TestContext.Current.CancellationToken));
+        }
+        Assert.True(client.ReadStreams.Single().Disposed);
+        Assert.True(source.CanRead);
     }
 
     [Theory]
@@ -359,6 +393,8 @@ public class S3ContentStoreTests
         public int Aborts { get; private set; }
         public bool AbortTokenWasCancelled { get; private set; }
         public bool RewindParts { get; init; }
+        public bool ArrayReads { get; init; }
+        public bool SynchronousReads { get; init; }
         public bool OmitChecksum { get; init; }
         public long? LastRequestedPartSize { get; private set; }
         public AmazonS3Exception? ReadFailure { get; init; }
@@ -462,10 +498,27 @@ public class S3ContentStoreTests
             base.Dispose(disposing);
         }
 
-        private static async Task<byte[]> ReadBytes(Stream input, CancellationToken ct)
+        private async Task<byte[]> ReadBytes(Stream input, CancellationToken ct)
         {
             using var output = new MemoryStream();
-            await input.CopyToAsync(output, 128 * 1024, ct);
+            if (ArrayReads)
+            {
+                var buffer = new byte[128 * 1024 + 2];
+                buffer[0] = buffer[^1] = 99;
+                int count;
+                while ((count = SynchronousReads
+                    ? input.Read(buffer, 1, buffer.Length - 2)
+                    : await input.ReadAsync(buffer, 1, buffer.Length - 2, ct)) != 0)
+                {
+                    output.Write(buffer, 1, count);
+                }
+                Assert.Equal(99, buffer[0]);
+                Assert.Equal(99, buffer[^1]);
+            }
+            else
+            {
+                await input.CopyToAsync(output, 128 * 1024, ct);
+            }
             return output.ToArray();
         }
     }

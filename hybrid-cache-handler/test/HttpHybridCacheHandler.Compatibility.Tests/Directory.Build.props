@@ -1,0 +1,8 @@
+<Project>
+  <Import Project="..\..\..\Directory.Build.props" />
+  <PropertyGroup>
+    <BaseIntermediateOutputPath Condition="'$(CompatibilityTargetFramework)' == 'netstandard2.0'">obj\standard\</BaseIntermediateOutputPath>
+    <BaseOutputPath Condition="'$(CompatibilityTargetFramework)' == 'netstandard2.0'">bin\standard\</BaseOutputPath>
+    <DefaultItemExcludes>$(DefaultItemExcludes);obj\**;bin\**;.package-smoke\**;.storage\**</DefaultItemExcludes>
+  </PropertyGroup>
+</Project>

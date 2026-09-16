@@ -9,6 +9,7 @@
       "hybrid-cache-handler\\src\\HttpHybridCacheHandler.ContentStore.GoogleCloudStorage\\HttpHybridCacheHandler.ContentStore.GoogleCloudStorage.csproj",
       "hybrid-cache-handler\\src\\HttpHybridCacheHandler.ContentStore.FileSystem\\HttpHybridCacheHandler.ContentStore.FileSystem.csproj",
       "hybrid-cache-handler\\test\\HttpHybridCacheHandler.Tests\\HttpHybridCacheHandler.Tests.csproj",
+      "hybrid-cache-handler\\test\\HttpHybridCacheHandler.Compatibility.Tests\\HttpHybridCacheHandler.Compatibility.Tests.csproj",
       "hybrid-cache-handler\\test\\HttpHybridCacheHandler.ContentStore.AzureBlob.Tests\\HttpHybridCacheHandler.ContentStore.AzureBlob.Tests.csproj",
       "hybrid-cache-handler\\test\\HttpHybridCacheHandler.ContentStore.S3.Tests\\HttpHybridCacheHandler.ContentStore.S3.Tests.csproj",
       "hybrid-cache-handler\\test\\HttpHybridCacheHandler.ContentStore.GoogleCloudStorage.Tests\\HttpHybridCacheHandler.ContentStore.GoogleCloudStorage.Tests.csproj",
@@ -17,7 +18,10 @@
       "hybrid-cache-handler\\samples\\FusionCacheSample\\FusionCacheSample.csproj",
       "hybrid-cache-handler\\samples\\YarpCachingProxySample\\YarpCachingProxySample.csproj",
       "hybrid-cache-handler\\benchmarks\\Benchmarks\\Benchmarks.csproj",
-      "hybrid-cache-handler\\conformance\\ConformanceProxy\\ConformanceProxy.csproj"
+      "hybrid-cache-handler\\conformance\\ConformanceProxy\\ConformanceProxy.csproj",
+      "hybrid-cache-handler\\conformance\\StandardConformanceProxy\\StandardConformanceProxy.csproj",
+      "hybrid-cache-handler\\conformance\\FrameworkWorker\\FrameworkWorker.csproj",
+      "hybrid-cache-handler\\conformance\\ConformanceProtocol.Tests\\ConformanceProtocol.Tests.csproj"
     ]
   }
 }

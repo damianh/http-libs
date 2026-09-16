@@ -14,8 +14,8 @@ public static class S3ContentStoreServiceCollectionExtensions
         this IServiceCollection services,
         Action<S3ContentStoreOptions> configure)
     {
-        ArgumentNullException.ThrowIfNull(services);
-        ArgumentNullException.ThrowIfNull(configure);
+        Guard.NotNull(services);
+        Guard.NotNull(configure);
         services.AddOptions<S3ContentStoreOptions>().Configure(configure);
         services.AddSingleton<S3ContentStore>(provider => new S3ContentStore(
             provider.GetRequiredService<Amazon.S3.IAmazonS3>(),

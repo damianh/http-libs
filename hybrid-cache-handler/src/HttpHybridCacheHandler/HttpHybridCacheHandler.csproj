@@ -6,7 +6,7 @@
     <MinVerMinimumMajorMinor>0.1</MinVerMinimumMajorMinor>
     <MinVerTagPrefix>cache-v</MinVerTagPrefix>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <IsAotCompatible>true</IsAotCompatible>
+    <IsAotCompatible Condition="'$(TargetFramework)' == 'net10.0'">true</IsAotCompatible>
 
     <!-- NuGet Package Metadata -->
     <PackageId>DamianH.HttpHybridCacheHandler</PackageId>
@@ -37,9 +37,20 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' Or '$(TargetFramework)' == 'net472'">
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.10" />
+    <PackageReference Include="Microsoft.Bcl.TimeProvider" Version="10.0.10" />
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="10.0.10" />
+    <PackageReference Include="System.Memory" Version="4.6.3" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
+    <Reference Include="System.Net.Http" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\HttpHybridCacheHandler.ContentStore\HttpHybridCacheHandler.ContentStore.csproj" />
     <InternalsVisibleTo Include="HttpHybridCacheHandler.Tests" />
+    <InternalsVisibleTo Include="HttpHybridCacheHandler.Compatibility.Tests" />
     <InternalsVisibleTo Include="Tests" />
   </ItemGroup>
 

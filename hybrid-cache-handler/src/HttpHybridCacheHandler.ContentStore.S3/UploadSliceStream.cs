@@ -1,7 +1,7 @@
 namespace DamianH.HttpHybridCacheHandler;
 
 // Seekable views let the SDK retry a part without buffering it or escaping its boundaries.
-internal sealed class UploadSliceStream(Stream source, long start, long length, int bufferSize, CancellationToken ct) : Stream
+internal sealed class UploadSliceStream(Stream source, long start, long length, int bufferSize, CancellationToken ct) : CompatibleStream
 {
     private long _position;
 

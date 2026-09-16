@@ -1,8 +1,10 @@
 using System.Buffers;
-using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+#if NETSTANDARD2_0 || NETFRAMEWORK
+using PeriodicTimer = DamianH.HttpHybridCacheHandler.ContentStore.FileSystem.CompatibilityPeriodicTimer;
+#endif
 
 namespace DamianH.HttpHybridCacheHandler.ContentStore.FileSystem;
 
@@ -34,9 +36,9 @@ public sealed class FileSystemContentStore : ILargeHttpCacheContentStore, IDispo
         TimeProvider timeProvider,
         ILogger<FileSystemContentStore> logger)
     {
-        ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(timeProvider);
-        ArgumentNullException.ThrowIfNull(logger);
+        Guard.NotNull(options);
+        Guard.NotNull(timeProvider);
+        Guard.NotNull(logger);
         options.Value.Validate();
         _timeProvider = timeProvider;
         _logger = logger;
@@ -66,8 +68,8 @@ public sealed class FileSystemContentStore : ILargeHttpCacheContentStore, IDispo
         string contentKey, Stream content, long contentLength, IEnumerable<string>? tags, CancellationToken ct)
     {
         var finalPath = GetContentPath(contentKey);
-        ArgumentNullException.ThrowIfNull(content);
-        ArgumentOutOfRangeException.ThrowIfNegative(contentLength);
+        Guard.NotNull(content);
+        Guard.NotNegative(contentLength);
         if (!content.CanRead || !content.CanSeek || content.Length - content.Position != contentLength)
         {
             throw new ArgumentException("Input must be readable, seekable, and contain exactly contentLength remaining bytes.", nameof(content));
@@ -77,14 +79,18 @@ public sealed class FileSystemContentStore : ILargeHttpCacheContentStore, IDispo
         string? tempPath = null;
         try
         {
-            ObjectDisposedException.ThrowIf(_disposed, this);
+            Guard.NotDisposed(_disposed, this);
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, _shutdown.Token);
             var token = linked.Token;
             token.ThrowIfCancellationRequested();
             ValidateRoot();
             ValidateEntry(finalPath);
             tempPath = Path.Combine(_root, $"{Prefix}{Guid.NewGuid():N}.tmp");
+#if NETSTANDARD2_0 || NETFRAMEWORK
+            using (var output = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write,
+#else
             await using (var output = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write,
+#endif
                 FileShare.None, 4096, FileOptions.Asynchronous | FileOptions.SequentialScan))
             {
                 var buffer = ArrayPool<byte>.Shared.Rent(64 * 1024);
@@ -154,7 +160,7 @@ public sealed class FileSystemContentStore : ILargeHttpCacheContentStore, IDispo
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            ObjectDisposedException.ThrowIf(_disposed, this);
+            Guard.NotDisposed(_disposed, this);
             ct.ThrowIfCancellationRequested();
             ValidateRoot();
             ValidateEntry(path);
@@ -186,7 +192,7 @@ public sealed class FileSystemContentStore : ILargeHttpCacheContentStore, IDispo
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            ObjectDisposedException.ThrowIf(_disposed, this);
+            Guard.NotDisposed(_disposed, this);
             ct.ThrowIfCancellationRequested();
             ValidateRoot();
             ValidateEntry(path);
@@ -208,7 +214,7 @@ public sealed class FileSystemContentStore : ILargeHttpCacheContentStore, IDispo
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            ObjectDisposedException.ThrowIf(_disposed, this);
+            Guard.NotDisposed(_disposed, this);
             ct.ThrowIfCancellationRequested();
             ValidateRoot();
             RemoveAbandonedTemps(ct);
@@ -325,17 +331,29 @@ public sealed class FileSystemContentStore : ILargeHttpCacheContentStore, IDispo
 
     private string GetContentPath(string key)
     {
-        ArgumentNullException.ThrowIfNull(key);
-        return Path.Combine(_root, $"{Prefix}{Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(key)))}.body");
+        Guard.NotNull(key);
+        return Path.Combine(_root, $"{Prefix}{Hashing.ToHex(Hashing.Sha256(Encoding.UTF8.GetBytes(key)), lowercase: true)}.body");
     }
 
     private static bool IsOwnedName(string path, string extension, int hashLength)
     {
         var name = Path.GetFileName(path);
-        return name.Length == Prefix.Length + hashLength + extension.Length
-            && name.StartsWith(Prefix, StringComparison.Ordinal)
-            && name.EndsWith(extension, StringComparison.Ordinal)
-            && name.AsSpan(Prefix.Length, hashLength).IndexOfAnyExcept("0123456789abcdef") < 0;
+        if (name.Length != Prefix.Length + hashLength + extension.Length
+            || !name.StartsWith(Prefix, StringComparison.Ordinal)
+            || !name.EndsWith(extension, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        for (var index = Prefix.Length; index < Prefix.Length + hashLength; index++)
+        {
+            if (name[index] is not (>= '0' and <= '9') and not (>= 'a' and <= 'f'))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private void ValidateRoot()

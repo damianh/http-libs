@@ -1,6 +1,8 @@
 #:project ../.github/BuildHelpers/BuildHelpers.csproj
 
 using static BuildHelpers.Targets;
+using static Bullseye.Targets;
+using static SimpleExec.Command;
 
 SharedTargets(
     "hybrid-cache-handler/hybrid-cache-handler.slnf",
@@ -33,10 +35,44 @@ AggregateTarget("pack-all", packages.Select(package => $"pack-{package.Key}"));
 AggregateTarget(Test, packages.Where(package => package.Key != "contentstore")
     .Select(package => $"test-{package.Key}"));
 
+const string compatibilityProject = "hybrid-cache-handler/test/HttpHybridCacheHandler.Compatibility.Tests";
+var repositoryRoot = Directory.GetCurrentDirectory();
+while (!Directory.Exists(Path.Combine(repositoryRoot, ".git")) && !File.Exists(Path.Combine(repositoryRoot, ".git")))
+{
+    repositoryRoot = Directory.GetParent(repositoryRoot)?.FullName
+        ?? throw new InvalidOperationException("Could not find the repository root.");
+}
+
+foreach (var (target, framework, properties) in new[]
+{
+    ("test-compatibility-modern", "net10.0", ""),
+    ("test-compatibility-standard", "net10.0", "-p:CompatibilityTargetFramework=netstandard2.0"),
+    ("test-compatibility-framework", "net472", "")
+})
+{
+    Target(target, async () =>
+    {
+        if (framework == "net472" && !OperatingSystem.IsWindows())
+        {
+            throw new PlatformNotSupportedException("Run the net472 test executable on Windows.");
+        }
+        await RunAsync("dotnet",
+            $"test --project {compatibilityProject} -c Release -f {framework} {properties} " +
+            $"--report-xunit-trx --report-xunit-trx-filename {target}-tests.trx", repositoryRoot);
+    });
+}
+
+AggregateTarget("test-compatibility", OperatingSystem.IsWindows()
+    ? ["test-compatibility-modern", "test-compatibility-standard", "test-compatibility-framework"]
+    : ["test-compatibility-modern", "test-compatibility-standard"]);
+
+Target("check-packages", dependsOn: ["pack-all"], () =>
+    RunAsync("pwsh", $"-NoProfile -File {compatibilityProject}/Verify-Packages.ps1", repositoryRoot));
+
 DefaultTarget(dependsOn:
 [
     Build,
     Test,
 ]);
 
-await RunTargetsAndExitAsync(args);
+await BuildHelpers.Targets.RunTargetsAndExitAsync(args);

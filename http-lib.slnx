@@ -42,6 +42,7 @@
   </Folder>
   <Folder Name="/hybrid-cache-handler/test/">
     <Project Path="hybrid-cache-handler/test/HttpHybridCacheHandler.Tests/HttpHybridCacheHandler.Tests.csproj" />
+    <Project Path="hybrid-cache-handler/test/HttpHybridCacheHandler.Compatibility.Tests/HttpHybridCacheHandler.Compatibility.Tests.csproj" />
     <Project Path="hybrid-cache-handler/test/HttpHybridCacheHandler.ContentStore.AzureBlob.Tests/HttpHybridCacheHandler.ContentStore.AzureBlob.Tests.csproj" />
     <Project Path="hybrid-cache-handler/test/HttpHybridCacheHandler.ContentStore.S3.Tests/HttpHybridCacheHandler.ContentStore.S3.Tests.csproj" />
     <Project Path="hybrid-cache-handler/test/HttpHybridCacheHandler.ContentStore.GoogleCloudStorage.Tests/HttpHybridCacheHandler.ContentStore.GoogleCloudStorage.Tests.csproj" />
@@ -57,6 +58,9 @@
   </Folder>
   <Folder Name="/hybrid-cache-handler/conformance/">
     <Project Path="hybrid-cache-handler/conformance/ConformanceProxy/ConformanceProxy.csproj" />
+    <Project Path="hybrid-cache-handler/conformance/StandardConformanceProxy/StandardConformanceProxy.csproj" />
+    <Project Path="hybrid-cache-handler/conformance/FrameworkWorker/FrameworkWorker.csproj" />
+    <Project Path="hybrid-cache-handler/conformance/ConformanceProtocol.Tests/ConformanceProtocol.Tests.csproj" />
   </Folder>
   <Folder Name="/file-distributed-cache/">
   </Folder>

@@ -25,7 +25,7 @@ internal sealed class SegmentedBuffer : IDisposable
     /// </summary>
     public void Write(ReadOnlySpan<byte> data)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        Guard.NotDisposed(_disposed, this);
 
         var remaining = data;
         while (remaining.Length > 0)
@@ -61,7 +61,7 @@ internal sealed class SegmentedBuffer : IDisposable
     /// </summary>
     public byte[] ToArray()
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        Guard.NotDisposed(_disposed, this);
 
         if (_totalLength == 0)
         {
@@ -90,7 +90,7 @@ internal sealed class SegmentedBuffer : IDisposable
     /// </summary>
     public async Task CopyToAsync(Stream destination, Ct cancellationToken)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        Guard.NotDisposed(_disposed, this);
 
         for (var i = 0; i <= _currentSegmentIndex && i < _segments.Count; i++)
         {

@@ -2,14 +2,14 @@ using Amazon.S3.Model;
 
 namespace DamianH.HttpHybridCacheHandler;
 
-internal sealed class ResponseOwnedStream(GetObjectResponse response) : Stream
+internal sealed class ResponseOwnedStream(GetObjectResponse response) : CompatibleStream
 {
     private bool _disposed;
     private Stream Inner
     {
         get
         {
-            ObjectDisposedException.ThrowIf(_disposed, this);
+            Guard.NotDisposed(_disposed, this);
             return response.ResponseStream;
         }
     }
@@ -43,6 +43,6 @@ internal sealed class ResponseOwnedStream(GetObjectResponse response) : Stream
     public override ValueTask DisposeAsync()
     {
         Dispose();
-        return ValueTask.CompletedTask;
+        return default;
     }
 }

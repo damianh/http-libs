@@ -55,7 +55,9 @@ public partial class HttpHybridCacheHandler
         var snapshot = new HttpRequestMessage(request.Method, request.RequestUri)
         {
             Version = request.Version,
+#if NET10_0_OR_GREATER
             VersionPolicy = request.VersionPolicy
+#endif
         };
         foreach (var header in request.Headers)
         {
@@ -119,7 +121,12 @@ public partial class HttpHybridCacheHandler
                     {
                         compressed = new AdaptiveSpool(_options, ex => _logger.CacheWriteFailed(uri, ex));
                         spool.Position = 0;
-                        await using (var gzip = new GZipStream(compressed, CompressionLevel.Fastest, leaveOpen: true))
+#if NET10_0_OR_GREATER
+                        await using
+#else
+                        using
+#endif
+                        (var gzip = new GZipStream(compressed, CompressionLevel.Fastest, leaveOpen: true))
                         {
                             await spool.CopyToAsync(gzip, 64 * 1024, ct);
                         }
@@ -225,7 +232,7 @@ public partial class HttpHybridCacheHandler
         {
             lock (_sync)
             {
-                ObjectDisposedException.ThrowIf(context.IsReleased, context);
+                Guard.NotDisposed(context.IsReleased, context);
                 context.Stripe.References++;
                 return new(this, context.UriTag, context.Stripe, context.Epoch, context.Sequence, context.Session);
             }

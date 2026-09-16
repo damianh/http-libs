@@ -7,9 +7,7 @@
 
 using System.Diagnostics;
 using System.Net;
-using DamianH.HttpHybridCacheHandler;
-using DamianH.HttpHybridCacheHandler.ContentStore.FileSystem;
-using Microsoft.Extensions.Caching.Hybrid;
+using Conformance;
 using Yarp.ReverseProxy.Forwarder;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,52 +18,51 @@ var origin = builder.Configuration["origin"] ?? "http://127.0.0.1:8000";
 builder.WebHost.ConfigureKestrel(kestrel => kestrel.Listen(IPAddress.Loopback, port));
 builder.Logging.SetMinimumLevel(LogLevel.Warning);
 
-builder.Services.AddHybridCache();
 builder.Services.AddHttpForwarder();
+var framework = builder.Configuration["framework"] ?? "net10.0";
+#if CONFORMANCE_STANDARD
+if (framework != "netstandard2.0") throw new ArgumentException("This host only tests netstandard2.0 assets.");
+#else
+if (framework is not ("net10.0" or "net472")) throw new ArgumentException("Use the Standard proxy project for netstandard2.0.");
+#endif
 var useFileSystem = bool.TryParse(builder.Configuration["file-system"], out var enabled) && enabled;
-if (useFileSystem)
+var root = builder.Configuration["content-root"];
+if (framework != "net472") CacheRuntime.AddServices(builder.Services, useFileSystem, root);
+
+await using var app = builder.Build();
+FrameworkBridge? bridge = null;
+HttpMessageHandler handler;
+string provenance;
+if (framework == "net472")
 {
-    var root = builder.Configuration["content-root"]
-        ?? throw new InvalidOperationException("--content-root is required in filesystem mode.");
-    builder.Services.AddHttpHybridCacheFileSystemContentStore(store =>
+    bridge = new FrameworkBridge(builder.Configuration["worker"]
+        ?? throw new ArgumentException("--worker is required for net472."), useFileSystem, root ?? "");
+    handler = bridge;
+    try
     {
-        store.RootDirectory = root;
-        store.MaximumAge = TimeSpan.FromDays(1);
-        store.MaximumTotalBytes = 1024L * 1024 * 1024;
-    });
+        await bridge.StartAsync();
+    }
+    catch
+    {
+        bridge.Dispose();
+        throw;
+    }
+    provenance = bridge.Provenance;
 }
-
-var app = builder.Build();
-
-// Shared (proxy) cache mode; fallback/default caching stays disabled because
-// heuristic "default caching" interferes with the suite (see its README).
-var options = new HttpHybridCacheHandlerOptions
+else
 {
-    Mode = CacheMode.Shared,
-    MaxCacheableContentSize = 50 * 1024 * 1024,
-    LargeContentThreshold = useFileSystem ? 1 : 1024 * 1024,
-    VaryHeaders = []
-};
-
-var socketsHandler = new SocketsHttpHandler
-{
-    UseProxy = false,
-    AllowAutoRedirect = false,
-    AutomaticDecompression = DecompressionMethods.None,
-    UseCookies = false,
-    ActivityHeadersPropagator = new ReverseProxyPropagator(DistributedContextPropagator.Current)
-};
-
-var cachingHandler = new HttpHybridCacheHandler(
-    socketsHandler,
-    app.Services.GetRequiredService<HybridCache>(),
-    TimeProvider.System,
-    contentStore: null,
-    options,
-    app.Services.GetRequiredService<ILogger<HttpHybridCacheHandler>>(),
-    app.Services.GetService<ILargeHttpCacheContentStore>());
-
-var invoker = new HttpMessageInvoker(cachingHandler, disposeHandler: false);
+    provenance = CacheRuntime.Verify(framework);
+    handler = CacheRuntime.CreateHandler(new SocketsHttpHandler
+    {
+        UseProxy = false,
+        AllowAutoRedirect = false,
+        AutomaticDecompression = DecompressionMethods.None,
+        UseCookies = false,
+        ActivityHeadersPropagator = new ReverseProxyPropagator(DistributedContextPropagator.Current)
+    }, app.Services, useFileSystem);
+}
+Console.WriteLine(provenance);
+using var invoker = new HttpMessageInvoker(handler, disposeHandler: true);
 var forwarder = app.Services.GetRequiredService<IHttpForwarder>();
 var requestConfig = new ForwarderRequestConfig
 {
@@ -73,7 +70,9 @@ var requestConfig = new ForwarderRequestConfig
     VersionPolicy = HttpVersionPolicy.RequestVersionOrLower
 };
 
-app.Map("/proxy-health", () => Results.Ok("OK"));
+app.Map("/proxy-health", () => bridge is null || bridge.Healthy
+    ? Results.Json(new { framework, provenance, ready = true, processId = Environment.ProcessId, workerProcessId = bridge?.WorkerProcessId })
+    : Results.Problem("The .NET Framework worker failed.", statusCode: 503));
 
 app.Map("/{**catch-all}", async httpContext =>
 {
@@ -81,10 +80,11 @@ app.Map("/{**catch-all}", async httpContext =>
     if (error != ForwarderError.None)
     {
         var errorFeature = httpContext.GetForwarderErrorFeature();
-        app.Logger.LogWarning(errorFeature?.Exception, "Forwarding error: {Error}", error);
+        app.Logger.LogWarning(errorFeature?.Exception, "Forwarding error: {Error} for {Method} {Path}", error,
+            httpContext.Request.Method, httpContext.Request.Path);
     }
 });
 
 app.Logger.LogWarning("ConformanceProxy listening on http://127.0.0.1:{Port}, forwarding to {Origin}", port, origin);
 
-app.Run();
+await app.RunAsync();

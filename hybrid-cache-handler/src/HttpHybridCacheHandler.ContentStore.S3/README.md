@@ -1,6 +1,7 @@
 # Amazon S3 HTTP cache content store
 
-`DamianH.HttpHybridCacheHandler.ContentStore.S3` targets .NET 10 and uses the official
+`DamianH.HttpHybridCacheHandler.ContentStore.S3` targets `net10.0`, `netstandard2.0`,
+and `net472` (.NET Framework 4.7.2+) and uses the official
 `AWSSDK.S3` **4.0.102.5** (stable version verified against NuGet during implementation).
 It depends on the independent ContentStore package, not the HTTP handler.
 Its independent release tag prefix is `cache-s3-v`.

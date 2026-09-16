@@ -216,7 +216,7 @@ internal static class VaryMatcher
     private static bool TryNormalizeVaryHeaderName(string? headerName, out string normalizedHeaderName)
     {
         normalizedHeaderName = string.Empty;
-        if (string.IsNullOrWhiteSpace(headerName))
+        if (TextCompatibility.IsNullOrWhiteSpace(headerName))
         {
             return false;
         }
@@ -229,7 +229,7 @@ internal static class VaryMatcher
 
         foreach (var c in candidate)
         {
-            if (!char.IsAsciiLetterOrDigit(c) &&
+            if (!TextCompatibility.IsAsciiLetterOrDigit(c) &&
                 c != '!' &&
                 c != '#' &&
                 c != '$' &&

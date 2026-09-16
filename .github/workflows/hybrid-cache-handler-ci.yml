@@ -38,3 +38,56 @@ jobs:
       test-targets: '["test-handler", "test-azureblob", "test-s3", "test-gcs", "test-filesystem"]'
       os-matrix: '["ubuntu-latest", "windows-latest"]'
       pack-target: pack-all
+
+  compatibility:
+    name: "Compatibility: ${{ matrix.target }} (${{ matrix.os }})"
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        target: [test-compatibility-modern, test-compatibility-standard]
+        include:
+          - os: windows-latest
+            target: test-compatibility-framework
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Test selected library assets
+        run: dotnet run hybrid-cache-handler/build.cs -- ${{ matrix.target }}
+      - name: Test report
+        if: success() || failure()
+        uses: phoenix-actions/test-reporting@f957cd93fc2d848d556fa0d03c57bc79127b6b5e
+        with:
+          name: "hybrid-cache-handler: ${{ matrix.target }} (${{ matrix.os }})"
+          path: "**/${{ matrix.target }}-tests.trx"
+          reporter: dotnet-trx
+          output-to: step-summary
+          fail-on-error: true
+
+  package-compatibility:
+    name: "Package consumers (${{ matrix.os }})"
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Pack all targets and check package consumers
+        run: dotnet run hybrid-cache-handler/build.cs -- check-packages
