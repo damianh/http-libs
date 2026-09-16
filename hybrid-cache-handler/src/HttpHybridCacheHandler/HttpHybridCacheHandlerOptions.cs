@@ -17,7 +17,13 @@ public class HttpHybridCacheHandlerOptions
     /// <summary>Per-process maximum number of disk spools, including compression staging (default 32).</summary>
     public int MaxConcurrentDiskSpools { get; set; } = 32;
 
-    /// <summary>Parent directory for private process-owned spool files. Defaults to the system temporary directory.</summary>
+    /// <summary>Parent directory for process-owned spool directories. When null, uses <see cref="Path.GetTempPath()"/>.</summary>
+    /// <remarks>
+    /// The application must select a trusted private parent, including verifying the default temporary directory
+    /// for the account running the process. On Windows, provision the parent with inheritable ACLs that restrict
+    /// access to trusted principals before spooling; the handler inherits these ACLs without restricting or
+    /// validating them. Unique directory names and leases manage spool lifetime, not access control.
+    /// </remarks>
     public string? SpoolDirectory { get; set; }
 
     internal void ValidateSpooling()

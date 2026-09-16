@@ -446,7 +446,15 @@ are process-wide; use consistent limits across handlers. Exhaustion abandons cac
 while origin delivery continues. These limits exclude caller buffers, fixed transfer
 buffers, provider SDK buffers, and persistent body storage.
 
-Use a trusted private staging parent. Each spill owns a unique leased directory;
+Use a trusted private staging parent. This is an application/deployment responsibility,
+including when `SpoolDirectory` is null and uses `Path.GetTempPath()`: verify access
+for the account running the process rather than assuming the default directory is
+private. On Windows, provision the parent with inheritable ACLs that restrict access
+to trusted principals before spooling. The handler inherits those ACLs; it does not
+restrict or validate them, so a shared/public parent is not made private by the handler.
+Unique directory names and leases manage spool lifetime, not access control.
+
+Each spill owns a unique leased directory;
 cleanup releases completed spools and can reclaim abandoned leased directories
 without deleting a live owner's files. HTTP cache metadata remains the caller's
 HybridCache configuration responsibility.
