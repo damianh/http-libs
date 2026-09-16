@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="..\Docs\Docs.csproj" />
+    <PackageReference Include="AngleSharp" Version="1.7.2" />
+    <PackageReference Include="Markdig" Version="1.3.2" />
+  </ItemGroup>
+</Project>

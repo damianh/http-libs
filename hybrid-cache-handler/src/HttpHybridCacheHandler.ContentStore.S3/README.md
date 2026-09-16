@@ -1,216 +1,42 @@
 # Amazon S3 HTTP cache content store
 
-`DamianH.HttpHybridCacheHandler.ContentStore.S3` targets `net10.0`, `netstandard2.0`,
-and `net472` (.NET Framework 4.7.2+) and uses the official
-`AWSSDK.S3` **4.0.102.5** (stable version verified against NuGet during implementation).
-It depends on the independent ContentStore package, not the HTTP handler.
-Its independent release tag prefix is `cache-s3-v`.
+`DamianH.HttpHybridCacheHandler.ContentStore.S3` targets `net10.0`,
+`netstandard2.0`, and `net472` using the official AWS SDK and independent
+content-store contracts. Release tags use
+`cache-s3-v`.
 
-## Setup
+**[Full S3 guide](https://damianh.github.io/http-libs/docs/hybrid-cache-handler/content-stores/s3/)**
+
+Install from your application project directory:
+
+```powershell
+dotnet add package DamianH.HttpHybridCacheHandler.ContentStore.S3
+```
+
+Given an application-owned `IAmazonS3` client configured through the normal AWS
+credential chain:
 
 ```csharp
-using Amazon;
 using Amazon.S3;
 using DamianH.HttpHybridCacheHandler;
-using Microsoft.Extensions.DependencyInjection;
 
-// The application owns this client; dispose it after all users and streams finish.
-using var s3 = new AmazonS3Client(RegionEndpoint.EUWest1);
-var services = new ServiceCollection();
 services.AddSingleton<IAmazonS3>(s3);
 services.AddHttpHybridCacheS3ContentStore(options =>
 {
     options.BucketName = "my-existing-cache-bucket";
-    options.KeyPrefix = "my-app/http-cache/"; // Include a trailing slash if desired.
-    options.MultipartThreshold = 16 * 1024 * 1024;
-    options.PartSize = 8 * 1024 * 1024;
-    options.TransferBufferSize = 64 * 1024;
-    options.AbortTimeout = TimeSpan.FromSeconds(30);
+    options.KeyPrefix = "my-app/http-cache/";
 });
-// Add the handler's services and enable its large-content offload separately.
 ```
 
-Register only one `ILargeHttpCacheContentStore` backend per handler setup.
-The adapter never provisions buckets or changes credentials, client retry policies,
-bucket lifecycle, or client checksum/payload-signing settings. Multipart requests
-use SHA-256 checksums, including the checksums required for completion. Configure credentials
-through the standard AWS credential chain; do not put credentials in cache options.
-Grant the applicable `s3:GetObject`, `s3:PutObject`, `s3:DeleteObject`, and
-`s3:AbortMultipartUpload` permissions for the configured namespace, plus any KMS
-permissions required by bucket encryption.
+Configure handler offload separately; register only one backend. The adapter
+never provisions buckets or changes credentials, retry/signing settings, or
+lifecycle policies. Inputs must be caller-owned, readable, seekable, and have the
+exact remaining length. Dispose returned streams and keep the SDK client alive
+until all users finish.
 
-For an S3-compatible endpoint, supply your own `AmazonS3Client` configured with
-`AmazonS3Config.ServiceURL`, `AuthenticationRegion`, and, when needed,
-`ForcePathStyle = true`. The endpoint must support the official SDK's signing,
-streaming checksum/chunked transfer behavior, SHA-256 multipart checksums, multipart semantics, and S3 error
-codes. Compatibility with arbitrary S3 implementations, directory buckets, and
-NativeAOT is **not** promised. Client-double and in-memory HTTP-transport tests are
-not actual AWS or compatible-service integration validation.
-
-## Streaming, ownership, and limits
-
-* Logical keys map to `KeyPrefix + lowercase SHA256(UTF8(contentKey))`. Raw URLs,
-  paths, and tags never become object keys or object tags. The prefix is literal
-  and must leave 64 bytes within S3's 1024-byte UTF-8 key limit.
-* `WriteAsync` requires a readable, seekable stream. Its remaining length from the
-  current position must equal `contentLength`; mismatches fail before upload.
-  The input is caller-owned, is never disposed, and must not be mutated or used
-  concurrently during a write. The final position is unspecified.
-* Below the threshold, a single PUT streams from the caller's input. At or above
-  it, parts upload **sequentially**, without whole-body or whole-part buffering.
-  The threshold accepts 1 byte through 5,000,000,000 bytes. A small threshold can
-  select a single final multipart part smaller than 5 MiB, which S3 permits.
-* Part size is between 5 MiB and 5 GiB. The adapter automatically increases it for
-  large objects to stay within 10,000 parts. The supported maximum is 10,000 ×
-  5 GiB (about 48.8 TiB); larger inputs fail explicitly, never truncate. Endpoint
-  limits can be lower. `TransferBufferSize` bounds each source read (1 byte–1 MiB),
-  not the SDK's own fixed buffers. Memory also includes at most 10,000 part ETags;
-  callers control concurrent writes and SDK client buffering.
-* PUT and multipart completion publish complete objects atomically. Failed parts
-  do not overwrite a previous body. Multipart failure/cancellation attempts abort
-  using an independent, bounded timeout. Abort errors are attached to the original
-  failure's `Data["S3MultipartAbortFailure"]`; they do not hide it. Lost responses
-  after successful publication can report failure although a **complete** object
-  exists. There is no unsafe compensating object delete.
-* Service and HTTP transport upload failures propagate as `HttpCacheContentStoreException` with the
-  original `AmazonS3Exception` or `HttpRequestException` attached. Cancellation and input errors are not
-  converted. Read/remove failures propagate unchanged. Only the explicit
-  `NoSuchKey` error maps to a missing body/no-op; a bare 404, `NoSuchBucket`,
-  access denial, throttling, transport, and integrity failures are not cache misses.
-* Returned streams own their `GetObjectResponse`; dispose each stream promptly
-  (synchronously or asynchronously). Reads remain independent. The adapter never
-  disposes the injected client. A partial read failure is not retried by the
-  adapter. Internal gzip bytes are opaque: **no HTTP Content-Encoding: gzip** is set.
-* Removal deletes exactly one hashed key, never a directory/prefix. Concurrent
-  same-key writes publish whole objects; applications should use stable,
-  content-addressed keys for shared bodies. Tags are advisory and ignored.
-
-## Retention and operations
-
-Configure bucket lifecycle rules scoped to the cache prefix. Recommended rules:
-
-1. Expire current cache objects after your chosen retention period.
-2. If versioning is enabled, expire noncurrent versions separately; deletes can
-   create delete markers rather than immediately reclaiming old data.
-3. Set `AbortIncompleteMultipartUpload` (for example after one day) as a safety net
-   for process crashes, lost initiation responses, or failed abort requests.
-
-Choose periods to suit cache economics, access patterns, and recovery requirements;
-the adapter neither applies these rules nor refreshes creation time on reads.
-HTTP freshness belongs to the handler, not bucket lifecycle. Lifecycle can delete
-a still-referenced body, which becomes a cache miss. Revalidation or deduplication
-does not necessarily refresh an object's age. Never eagerly delete a shared
-content-addressed body merely because one URI's metadata was invalidated.
-
-For example, an operator can incorporate this S3 lifecycle configuration into
-their existing bucket configuration. It targets only `my-app/http-cache/`, matching
-the setup above; adjust both prefixes together and choose retention periods for
-your workload:
-
-```json
-{
-  "Rules": [
-    {
-      "ID": "http-cache-retention",
-      "Status": "Enabled",
-      "Filter": {
-        "Prefix": "my-app/http-cache/"
-      },
-      "Expiration": {
-        "Days": 7
-      },
-      "NoncurrentVersionExpiration": {
-        "NoncurrentDays": 7
-      },
-      "AbortIncompleteMultipartUpload": {
-        "DaysAfterInitiation": 1
-      }
-    },
-    {
-      "ID": "http-cache-expired-delete-markers",
-      "Status": "Enabled",
-      "Filter": {
-        "Prefix": "my-app/http-cache/"
-      },
-      "Expiration": {
-        "ExpiredObjectDeleteMarker": true
-      }
-    }
-  ]
-}
-```
-
-The first rule expires current objects after seven days, removes noncurrent
-versions after seven noncurrent days, and aborts incomplete multipart uploads
-after one day. In a versioned bucket, current-version expiration ordinarily adds
-a delete marker instead of permanently removing the bytes; the noncurrent rule
-reclaims those versions. The separate second rule removes expired delete markers
-once no noncurrent versions remain. Lifecycle processing is asynchronous, not an
-exact deletion deadline or an HTTP TTL.
-
-**Operator action only:** review the bucket's existing rules and merge these
-entries through your infrastructure configuration or the S3 console. S3's
-`PutBucketLifecycleConfiguration` operation replaces the entire lifecycle
-configuration; submitting only this example can remove unrelated rules. Keep
-the cache prefix isolated from application data, account for minimum storage
-duration charges and Object Lock if applicable, and obtain the appropriate
-administrative permissions separately from the adapter's runtime permissions.
-No bucket configuration is deployed by this package or its tests, and this
-example has not been applied to a real bucket.
-
-Run targeted tests from the repository root:
-
-```powershell
-dotnet test --project .\hybrid-cache-handler\test\HttpHybridCacheHandler.ContentStore.S3.Tests\HttpHybridCacheHandler.ContentStore.S3.Tests.csproj
-```
-
-Before production, validate the configured real endpoint with an isolated prefix:
-empty/small/multipart exact bytes, denied permissions, missing keys/buckets,
-cancelled multipart cleanup, encryption, checksums, and lifecycle/versioning.
-No real-provider credentials or network validation are required or implied by the
-local test suite.
-
-### Explicit opt-in real-provider tests
-
-`S3IntegrationTests` has three real-client test cases: empty, small, and multipart
-bodies. Each checks exact bytes, caller-owned upload streams, missing reads, and
-idempotent removal. xUnit **skips** these cases unless
-`HTTP_CACHE_S3_INTEGRATION=1`. No client is constructed or cloud API called by these
-cases without that opt-in. Once enabled, missing configuration is a test failure,
-not a silent skip; provider/authentication and cleanup errors also fail the test.
-
-Supply an **existing, disposable test bucket** and a **dedicated test prefix**
-that you own. The tests never create buckets, enumerate/delete prefixes, or change
-bucket policies. Each invocation adds a fresh GUID subprefix and deletes only its
-own hashed object key in `finally`, using a separate cleanup timeout. Grant read,
-write, delete, and multipart-abort access to the test prefix. AWS also requires
-appropriate `s3:ListBucket` permission for missing objects to return 404 rather
-than 403; the tests themselves do not list the bucket.
-
-```powershell
-$env:HTTP_CACHE_S3_INTEGRATION = "1"
-$env:HTTP_CACHE_S3_TEST_BUCKET = "my-existing-disposable-test-bucket"
-$env:HTTP_CACHE_S3_TEST_PREFIX = "owned-integration-tests/http-cache"
-$env:HTTP_CACHE_S3_TEST_REGION = "eu-west-1"
-# Configure your normal AWS credential chain externally, e.g. AWS_PROFILE.
-# Optional, only for a compatible endpoint you explicitly intend to test:
-# $env:HTTP_CACHE_S3_TEST_ENDPOINT = "https://s3.example.test"
-# $env:HTTP_CACHE_S3_TEST_FORCE_PATH_STYLE = "1" # 0 or 1; default 0
-try {
-    dotnet test --project .\hybrid-cache-handler\test\HttpHybridCacheHandler.ContentStore.S3.Tests\HttpHybridCacheHandler.ContentStore.S3.Tests.csproj
-}
-finally {
-    Remove-Item Env:\HTTP_CACHE_S3_INTEGRATION
-}
-```
-
-The resource owner pays for requests/storage and remains responsible for cleanup
-after process termination or network/permission failures. Use lifecycle rules
-for abandoned objects and incomplete uploads. Prefer an unversioned disposable
-bucket: with versioning, single-key deletes leave noncurrent versions/delete
-markers, whose cleanup remains the owner's lifecycle responsibility. The tests
-do not delete object versions or modify lifecycle rules.
-
-A passing opt-in run validates only the configured endpoint and credentials for
-these scenarios. Skipped integration cases or passing client-double/transport
-tests are **not** evidence of real-provider interoperability.
+Multipart parts stream sequentially. Failed aborts can leave uploads requiring
+operator cleanup; only `NoSuchKey` is a miss, not every 404. Retention is separate
+from HTTP freshness; do not delete shared bodies on URI invalidation.
+Arbitrary S3-compatible endpoints, directory buckets, and NativeAOT are not
+promised. The guide includes limits, permissions, lifecycle/versioning safety,
+and explicit opt-in real-provider tests; local tests are not interoperability proof.

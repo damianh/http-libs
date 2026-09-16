@@ -62,6 +62,10 @@
     <Project Path="hybrid-cache-handler/conformance/FrameworkWorker/FrameworkWorker.csproj" />
     <Project Path="hybrid-cache-handler/conformance/ConformanceProtocol.Tests/ConformanceProtocol.Tests.csproj" />
   </Folder>
+  <Folder Name="/docs/">
+    <Project Path="docs/Docs.Tools/Docs.Tools.csproj" />
+    <Project Path="docs/Docs/Docs.csproj" />
+  </Folder>
   <Folder Name="/file-distributed-cache/">
   </Folder>
   <Folder Name="/file-distributed-cache/src/">

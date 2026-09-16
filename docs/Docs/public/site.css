@@ -1,0 +1,26 @@
+.prose {
+    overflow-wrap: anywhere;
+}
+
+.prose table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.prose table img {
+    margin: 0;
+    vertical-align: middle;
+}
+
+@media (max-width: 768px) {
+    .docs-header .docs-header-inner {
+        gap: 0.5rem;
+        padding-inline: 0.75rem;
+    }
+
+    .docs-header #search-trigger kbd,
+    .docs-header .docs-social-link {
+        display: none;
+    }
+}

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="http-libs">
+  <defs>
+    <linearGradient id="http-libs-mark" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF9C7A" />
+      <stop offset="1" stop-color="#EE6644" />
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="7.5" fill="url(#http-libs-mark)" />
+  <g fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 12h12.2" />
+    <path d="M18.4 9.2 22 12l-3.6 2.8" />
+    <path d="M23 20H10.8" />
+    <path d="M13.6 17.2 10 20l3.6 2.8" />
+  </g>
+</svg>
