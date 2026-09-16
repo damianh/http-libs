@@ -85,10 +85,13 @@ does not invent a Content-Length when none was declared.
 This is an IPC envelope around framework HTTP messages, **not** an HTTP parser.
 
 Frames are bounded to 64 MiB, bodies to 60 MiB, individual strings to 1 MiB,
-header entries to 512, and values per entry to 4,096. The worker accepts at most
-32 concurrent connections. Invalid lengths, truncated frames, unexpected
-message kinds, misplaced headers, and trailing data are rejected. This
-test-only bridge buffers bodies; it is not a production streaming transport.
+header entries to 512, and values per entry to 4,096. Encoding checks frame and
+body budgets before each write and caps buffer capacity at the corresponding
+limit; string byte lengths are checked before allocating their UTF-8 payloads.
+The worker accepts at most 32 concurrent connections. Invalid lengths, truncated
+frames, unexpected message kinds, misplaced headers, and trailing data are
+rejected. This test-only bridge buffers bodies; it is not a production streaming
+transport.
 
 Cancellation closes the request pipe and cancels the worker's origin request.
 Worker/protocol errors poison front-end health instead of becoming successful
@@ -135,8 +138,11 @@ dotnet run --project ConformanceProtocol.Tests\ConformanceProtocol.Tests.csproj 
 The comparison tests cover missing passing/known-failure fixtures, empty output,
 regressions, and improvements. Protocol tests cover metadata/body fidelity,
 cookie boundaries, content separation, HEAD lengths, fragmented reads, invalid
-lengths, truncation, trailing data, and cancellation. CI runs all six Windows
-cells and the four modern/Standard Linux cells. The Windows-only lifecycle test
-additionally exercises binary PATCH forwarding, multiple Set-Cookie fields,
-origin disconnects, cancellation during a stalled body, and worker termination.
+lengths, truncation, trailing data, and cancellation.
+Protocol size tests also cover exact frame/string boundaries, combined
+metadata/header/body budgets, and rejection before buffer growth or later fields.
+CI runs all six Windows cells and the four modern/Standard Linux cells.
+The Windows-only lifecycle test additionally exercises binary PATCH forwarding,
+multiple Set-Cookie fields, origin disconnects, cancellation during a stalled
+body, and worker termination.
 Its diagnostic output is saved in `worker-lifecycle.log`.

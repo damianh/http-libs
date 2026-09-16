@@ -2,6 +2,7 @@
 // See LICENSE in the project root for license information.
 
 using System.Net;
+using System.Net.Http.Headers;
 using Conformance;
 using Xunit;
 
@@ -110,6 +111,120 @@ public class WireProtocolTests
         Assert.Throws<InvalidDataException>(() => WireProtocol.DecodeHello([.. WireProtocol.EncodeHello("hi"), 0]));
         Assert.Throws<InvalidDataException>(() => WireProtocol.DecodeHello([WireProtocol.Hello, 255, 255, 255, 127]));
         Assert.Throws<EndOfStreamException>(() => WireProtocol.DecodeHello([WireProtocol.Hello, 1, 0, 0, 0]));
+    }
+
+    [Theory]
+    [InlineData(17)]
+    [InlineData(WireProtocol.MaxBody)]
+    [InlineData(WireProtocol.MaxFrame)]
+    public async Task BoundedWritesCapCapacityAndRejectOverflowWithoutChangingBuffer(int limit)
+    {
+        using var stream = new WireProtocol.BoundedWriteStream(limit, "Limit exceeded.");
+        var chunk = new byte[limit / 2 + 1];
+        stream.Write(chunk, 0, chunk.Length);
+        Assert.InRange(stream.Capacity, chunk.Length, limit);
+        await stream.WriteAsync(chunk, 0, limit - chunk.Length, CancellationToken.None);
+        Assert.Equal(limit, stream.Length);
+        Assert.Equal(limit, stream.Capacity);
+
+        Assert.Throws<InvalidDataException>(() => stream.WriteByte(1));
+        Assert.Throws<InvalidDataException>(() => stream.Write(chunk, 0, 1));
+        await Assert.ThrowsAsync<InvalidDataException>(async () =>
+            await stream.WriteAsync(chunk, 0, 1, CancellationToken.None));
+        Assert.Equal(limit, stream.Length);
+        Assert.Equal(limit, stream.Capacity);
+    }
+
+    [Fact]
+    public void OversizedWriteDoesNotAllocateOrPartiallyWrite()
+    {
+        using var stream = new WireProtocol.BoundedWriteStream(17, "Limit exceeded.");
+        Assert.Throws<InvalidDataException>(() => stream.Write(new byte[18], 0, 18));
+        Assert.Equal(0, stream.Length);
+        Assert.Equal(0, stream.Capacity);
+    }
+
+    [Fact]
+    public void BinaryWriterChecksScalarAndSpanWritesBeforeGrowingBuffer()
+    {
+        using var stream = new WireProtocol.BoundedWriteStream(9, "Limit exceeded.");
+        using var writer = new BinaryWriter(stream);
+        writer.Write((byte)1);
+        writer.Write(42);
+        writer.Write(new byte[] { 2, 3, 4 }.AsSpan());
+        Assert.Equal(8, stream.Length);
+        Assert.Throws<InvalidDataException>(() => writer.Write(42));
+        Assert.Equal(8, stream.Length);
+        writer.Write((byte)5);
+        Assert.Throws<InvalidDataException>(() => writer.Write((byte)6));
+        Assert.Throws<InvalidDataException>(() => writer.Write(new byte[] { 7 }.AsSpan()));
+        Assert.Equal(9, stream.Length);
+        Assert.Equal(9, stream.Capacity);
+        Assert.Equal(new byte[] { 1, 42, 0, 0, 0, 2, 3, 4, 5 }, stream.ToArray());
+    }
+
+    [Theory]
+    [InlineData(false, 0)]
+    [InlineData(true, 0)]
+    [InlineData(false, WireProtocol.MaxBody)]
+    [InlineData(true, WireProtocol.MaxBody)]
+    public async Task FrameLimitIncludesMetadataHeadersAndBody(bool contentHeaders, int bodyLength)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "http://127.0.0.1/")
+        {
+            Content = new ByteArrayContent([])
+        };
+        request.Content.Headers.ContentLength = bodyLength;
+        HttpHeaders headers = contentHeaders ? request.Content.Headers : request.Headers;
+        var values = Enumerable.Repeat("", 64).ToArray();
+        Assert.True(headers.TryAddWithoutValidation("X-Padding", values));
+        var overhead = (await WireProtocol.EncodeRequest(request, CancellationToken.None)).Length;
+
+        request.Content.Dispose();
+        request.Content = new ByteArrayContent(new byte[bodyLength]);
+        request.Content.Headers.ContentLength = bodyLength;
+        headers = contentHeaders ? request.Content.Headers : request.Headers;
+        var remaining = WireProtocol.MaxFrame - overhead - bodyLength;
+        for (var i = 0; i < values.Length; i++)
+        {
+            var length = Math.Min(1024 * 1024, remaining);
+            values[i] = new string('a', length);
+            remaining -= length;
+        }
+        Assert.Equal(0, remaining);
+        headers.Remove("X-Padding");
+        Assert.True(headers.TryAddWithoutValidation("X-Padding", values));
+        Assert.Equal(WireProtocol.MaxFrame, (await WireProtocol.EncodeRequest(request, CancellationToken.None)).Length);
+
+        values[^1] += "a";
+        headers.Remove("X-Padding");
+        Assert.True(headers.TryAddWithoutValidation("X-Padding", values));
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() => WireProtocol.EncodeRequest(request, CancellationToken.None));
+        Assert.Equal("IPC message exceeds frame limit.", error.Message);
+    }
+
+    [Fact]
+    public async Task OversizedResponseHeadersFailBeforeSerializingLaterFields()
+    {
+        using var response = new HttpResponseMessage(HttpStatusCode.OK);
+        var value = new string('a', 1024 * 1024);
+        Assert.True(response.Headers.TryAddWithoutValidation("X-Padding", Enumerable.Repeat(value, 128)));
+        Assert.True(response.Headers.TryAddWithoutValidation("X-Later", "\ud800"));
+
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() => WireProtocol.EncodeResponse(response, CancellationToken.None));
+        Assert.Equal("IPC message exceeds frame limit.", error.Message);
+    }
+
+    [Fact]
+    public void StringLimitUsesUtf8BytesAndRejectsBeforeAllocatingEncodedPayload()
+    {
+        var value = new string('\u00e9', 1024 * 1024 / 2);
+        Assert.Equal(value, WireProtocol.DecodeHello(WireProtocol.EncodeHello(value)));
+        var oversized = value + "a";
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        Assert.Throws<InvalidDataException>(() => WireProtocol.EncodeHello(oversized));
+        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        Assert.InRange(allocated, 0, 64 * 1024);
     }
 
     [Fact]

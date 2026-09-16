@@ -119,11 +119,10 @@ internal static class WireProtocol
 
     private static byte[] Encode(byte kind, Action<BinaryWriter> write)
     {
-        using var stream = new MemoryStream();
+        using var stream = new BoundedWriteStream(MaxFrame, "IPC message exceeds frame limit.");
         using var writer = new BinaryWriter(stream, Utf8, true);
         writer.Write(kind);
         write(writer);
-        if (stream.Length > MaxFrame) throw new InvalidDataException("IPC message exceeds frame limit.");
         return stream.ToArray();
     }
 
@@ -144,8 +143,8 @@ internal static class WireProtocol
 
     private static void WriteString(BinaryWriter writer, string value)
     {
+        if (Utf8.GetByteCount(value) > MaxString) throw new InvalidDataException("IPC string exceeds limit.");
         var bytes = Utf8.GetBytes(value);
-        if (bytes.Length > MaxString) throw new InvalidDataException("IPC string exceeds limit.");
         writer.Write(bytes.Length);
         writer.Write(bytes);
     }
@@ -198,7 +197,7 @@ internal static class WireProtocol
         if (content is null) return [];
         token.ThrowIfCancellationRequested();
         if (content.Headers.ContentLength > MaxBody) throw new InvalidDataException("IPC body exceeds limit.");
-        using var buffer = new BoundedBodyStream(token);
+        using var buffer = new BoundedWriteStream(MaxBody, "IPC body exceeds limit.", token);
         using var cancellation = token.Register(content.Dispose);
         // YARP request content is write-only: ReadAsStreamAsync is deliberately unsupported.
         await content.CopyToAsync(buffer).ConfigureAwait(false);
@@ -246,7 +245,7 @@ internal static class WireProtocol
             Task.FromResult<Stream>(new MemoryStream(bytes, false));
     }
 
-    private sealed class BoundedBodyStream(CancellationToken token) : Stream
+    internal sealed class BoundedWriteStream(int limit, string limitMessage, CancellationToken token = default) : Stream
     {
         private readonly MemoryStream _buffer = new();
         public override bool CanRead => false;
@@ -254,12 +253,28 @@ internal static class WireProtocol
         public override bool CanWrite => true;
         public override long Length => _buffer.Length;
         public override long Position { get => _buffer.Position; set => throw new NotSupportedException(); }
+        internal int Capacity => _buffer.Capacity;
         internal byte[] ToArray() => _buffer.ToArray();
-        public override void Write(byte[] buffer, int offset, int count)
+        private void EnsureCapacity(int count)
         {
             token.ThrowIfCancellationRequested();
-            if (_buffer.Length + count > MaxBody) throw new InvalidDataException("IPC body exceeds limit.");
+            if (count > limit - _buffer.Length) throw new InvalidDataException(limitMessage);
+            var required = (int)_buffer.Length + count;
+            if (required > _buffer.Capacity)
+            {
+                // MemoryStream's geometric growth can exceed the limit even when the write fits.
+                _buffer.Capacity = Math.Max(required, (int)Math.Min(limit, Math.Max(256L, 2L * _buffer.Capacity)));
+            }
+        }
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            EnsureCapacity(count);
             _buffer.Write(buffer, offset, count);
+        }
+        public override void WriteByte(byte value)
+        {
+            EnsureCapacity(1);
+            _buffer.WriteByte(value);
         }
         public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
