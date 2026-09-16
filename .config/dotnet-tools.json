@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "isRoot": true,
+  "tools": {
+    "atoll.cli": {
+      "version": "0.12.1",
+      "commands": [
+        "atoll"
+      ],
+      "rollForward": false
+    }
+  }
+}

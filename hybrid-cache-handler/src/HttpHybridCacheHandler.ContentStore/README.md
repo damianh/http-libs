@@ -1,41 +1,43 @@
 # HTTP cache content-store contracts
 
-`DamianH.HttpHybridCacheHandler.ContentStore` provides provider-independent contracts for
-`DamianH.HttpHybridCacheHandler` and its content-store adapters.
-No cloud SDK or HybridCache dependency is required to implement a store.
+`DamianH.HttpHybridCacheHandler.ContentStore` provides provider-independent
+streaming contracts for the HTTP caching handler and adapters, without a cloud
+SDK or HybridCache dependency.
 
-## Frameworks
+Targets are `net10.0`, `netstandard2.0`, and `net472`, matching the handler and
+four adapters. NuGet supplies older-target async support dependencies; enable
+automatic binding redirects in Framework applications. The handler's HybridCache
+dependency warns that `net472` is unsupported/untested upstream. The contracts
+do not depend on HybridCache. See
+[framework compatibility](https://damianh.github.io/http-libs/docs/hybrid-cache-handler/compatibility/)
+for header behavior and actual-runtime testing limitations.
 
-This package and all five consuming HTTP cache packages (the handler and four
-adapters) ship `net10.0`, `netstandard2.0`, and `net472` assets. Older-target
-contracts use NuGet support packages for the public `ValueTask`/async-interface
-types where required; let NuGet restore these transitive dependencies and enable
-automatic binding redirects in Framework applications.
+**[Full contracts, ownership, and migration guide](https://damianh.github.io/http-libs/docs/hybrid-cache-handler/content-stores/overview/)**
 
-Compatibility tests assert the selected assemblies for all six packages, including
-an explicitly forced .NET Standard asset on a .NET 10 host. Framework executables
-run on Windows's installed runtime, commonly .NET Framework 4.8; targeting `net472`
-does not establish testing on an actual 4.7.2 installation.
+Install from your project directory:
 
-The contracts themselves have no HybridCache dependency. Consumers using the
-handler should note that its current `Microsoft.Extensions.Caching.Hybrid` 10.8.0
-dependency includes older-target assemblies but emits an upstream
-unsupported/untested `net472` warning. That warning is not suppressed, and
-downstream coverage does not alter upstream support. See the handler's
-[framework compatibility documentation](https://github.com/damianh/http-lib/tree/main/hybrid-cache-handler#framework-compatibility)
-for the public-enumeration header contract and target-specific handler examples.
+```powershell
+dotnet add package DamianH.HttpHybridCacheHandler.ContentStore
+```
 
-## Storage contract
+Given a configured `IHttpCacheContentStore`:
 
-`IHttpCacheContentStore` provides complete streaming writes, independently owned read streams,
-and single-key removal. `ILargeHttpCacheContentStore` identifies the optional external body store.
-The handler retains responsibility for HTTP freshness, variant selection, and metadata invalidation.
-Storage retention is separate from HTTP freshness.
+```csharp
+using var input = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("example body"));
+await store.WriteAsync("opaque-key", input, input.Length, null, CancellationToken.None);
+using var body = await store.OpenReadAsync("opaque-key", CancellationToken.None);
+if (body is not null)
+    await body.CopyToAsync(Stream.Null);
+```
 
-Recognized SDK write failures are propagated as `HttpCacheContentStoreException`
-(an `IOException`) with the original provider exception attached. Cancellation and
-programming errors are not converted. This lets the handler log and abandon a failed
-cache fill without depending on cloud SDK exception types or corrupting the origin
-response. Missing read results alone return null; other read failures propagate.
+Writes require a readable, seekable caller-owned stream and exact remaining stored
+length; adapters finish consuming it before returning and leave it open. Callers
+own and must dispose returned read streams. Only missing reads return null.
+Recognized SDK write failures become `HttpCacheContentStoreException`
+(`IOException`); cancellation and programming errors are not converted.
 
-This package is versioned independently using `cache-contentstore-v` tags.
+`ILargeHttpCacheContentStore` identifies the optional external body store. HTTP
+freshness, variant selection, and metadata invalidation remain with the handler;
+retention is separate. Do not eagerly remove shared bodies when invalidating metadata.
+The stream contract is a breaking change from the initial Stowage prerelease, not
+a binary-compatible replacement. This package is versioned with `cache-contentstore-v` tags.

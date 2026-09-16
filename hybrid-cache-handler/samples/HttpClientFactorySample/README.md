@@ -1,49 +1,24 @@
-# HttpClient Factory Sample
+# HttpClientFactory caching sample
 
-This sample demonstrates how to integrate `HybridCacheHttpHandler` with ASP.NET Core's `IHttpClientFactory`.
+Demonstrates `HttpHybridCacheHandler` with a named `HttpClient`, HybridCache,
+automatic decompression, and repeated-request timings.
 
-## Overview
+**[Full sample guide](https://damianh.github.io/http-libs/docs/hybrid-cache-handler/samples/http-client-factory/)**
 
-The sample shows:
-- Registering `HybridCache` in the dependency injection container
-- Configuring a named `HttpClient` with the caching handler
-- Making HTTP requests that benefit from client-side caching
-- Observing cache hits through timing differences
+From this directory:
 
-## Running the Sample
-
-```bash
+```powershell
 dotnet run
 ```
 
-The application will make three identical requests to the GitHub API. You'll notice:
-1. First request: Full round-trip to the server (slower)
-2. Second request: Served from cache (much faster)
-3. Third request: Still served from cache (fast)
+Or from the repository root:
 
-## Configuration
-
-The caching handler is configured with:
-- **DefaultCacheDuration**: 5 minutes for responses without caching headers
-- **MaxCacheableContentSize**: 10 MB maximum response size
-
-## Key Code
-
-```csharp
-builder.Services
-    .AddHttpClient("CachedClient")
-    .AddHttpMessageHandler(sp => new HybridCacheHttpHandler(
-        sp.GetRequiredService<HybridCache>(),
-        TimeProvider.System,
-        new HybridCacheHttpHandlerOptions
-        {
-            DefaultCacheDuration = TimeSpan.FromMinutes(5),
-            MaxCacheableContentSize = 10 * 1024 * 1024
-        }
-    ));
+```powershell
+dotnet run --project hybrid-cache-handler\samples\HttpClientFactorySample\HttpClientFactorySample.csproj
 ```
 
-## Learn More
-
-- [IHttpClientFactory documentation](https://learn.microsoft.com/en-us/dotnet/core/extensions/httpclient-factory)
-- [HybridCache documentation](https://learn.microsoft.com/en-us/aspnet/core/performance/caching/hybrid)
+The application sends three requests to `https://httpbin.org/cache/60` and waits
+for a key before exiting. It sets a five-minute `FallbackCacheDuration`, uses the
+default 10 MB size limit, and compresses eligible bodies at 1024 bytes.
+Timings illustrate caching rather than establish a benchmark; actual hits depend
+on the origin's responses. See the full guide for registration code and API references.

@@ -425,3 +425,7 @@ nul
 
 # Weave plan directory
 .weave/
+
+# Atoll documentation output and build cache
+docs/Docs/dist/
+docs/Docs/.atoll/
