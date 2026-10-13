@@ -99,8 +99,8 @@ response is controlled by the proxy.
 | Option | Default | Purpose |
 |---|---|---|
 | `ConnectTimeout` | 10 s | DNS resolution plus TCP connect to the destination |
-| `TunnelIdleTimeout` | 5 min | Closes tunnels with no traffic in either direction |
-| `HttpActivityTimeout` | 100 s | YARP activity timeout for `http://` forwarding |
+| `TunnelIdleTimeout` | 5 min | Closes tunnels (including upgraded WebSockets) with no traffic in either direction |
+| `HttpActivityTimeout` | 100 s | Maximum time without progress when forwarding `http://` requests |
 | `ConnectRequestHeadersTimeout` | 30 s | Time allowed to receive an HTTP/1.1 `CONNECT` head |
 | `MaxConnectRequestHeadersSize` | 16 KiB | Larger HTTP/1.1 `CONNECT` heads get `431` |
 | `MaxConcurrentTunnels` | 10,000 | Further tunnels get `503`; `null` for no limit |

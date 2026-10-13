@@ -8,8 +8,8 @@ using System.Net.Http;
 using System.Net.Sockets;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using DamianH.Http.ForwardProxy.Internal.Forwarding;
 using Microsoft.Extensions.Options;
-using Yarp.ReverseProxy.Forwarder;
 
 namespace DamianH.Http.ForwardProxy.Internal;
 
@@ -23,9 +23,7 @@ internal sealed class ForwardProxyHandler
     private readonly IForwardProxyDestinationFilter[] _filters;
     private readonly ForwardProxyMetrics _metrics;
     private readonly TunnelLimiter _limiter;
-    private readonly IHttpForwarder _forwarder;
-    private readonly HttpMessageInvoker _httpClient;
-    private readonly ForwarderRequestConfig _requestConfig;
+    private readonly HttpForwarder _forwarder;
     private readonly ILogger _logger;
 
     public ForwardProxyHandler(
@@ -35,7 +33,6 @@ internal sealed class ForwardProxyHandler
         ProxyAuthorizer authorizer,
         IEnumerable<IForwardProxyDestinationFilter> filters,
         ForwardProxyMetrics metrics,
-        IHttpForwarder forwarder,
         ILogger<ForwardProxyHandler> logger)
     {
         _options = options.Value;
@@ -45,16 +42,8 @@ internal sealed class ForwardProxyHandler
         _filters = [.. filters];
         _metrics = metrics;
         _limiter = new TunnelLimiter(_options.MaxConcurrentTunnels);
-        _forwarder = forwarder;
         _logger = logger;
-        _httpClient = CreateHttpClient(dialer, _options);
-        _requestConfig = new ForwarderRequestConfig
-        {
-            ActivityTimeout = _options.HttpActivityTimeout,
-            Version = HttpVersion.Version11,
-            VersionPolicy = HttpVersionPolicy.RequestVersionOrLower,
-            AllowResponseBuffering = false,
-        };
+        _forwarder = new HttpForwarder(CreateHttpClient(dialer, _options), _options);
         if (_authorizer.IsAnonymous)
         {
             Log.AnonymousProxy(logger);
@@ -108,7 +97,7 @@ internal sealed class ForwardProxyHandler
         }
     }
 
-    /// <summary>Authorizes and forwards an absolute-form request through YARP.</summary>
+    /// <summary>Authorizes and forwards an absolute-form <c>http://</c> request.</summary>
     public async Task ForwardHttpAsync(HttpContext context, Uri target)
     {
         if (!string.Equals(target.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase))
@@ -132,28 +121,17 @@ internal sealed class ForwardProxyHandler
         }
 
         _metrics.Request(ForwardProxyRequestKind.Http, Outcomes.Allowed);
-        var transformer = new ForwardProxyTransformer(target, _options);
-        var error = await _forwarder.SendAsync(context, $"{target.Scheme}://{target.Authority}", _httpClient, _requestConfig, transformer).ConfigureAwait(false);
-        if (error == ForwarderError.None)
+        var failure = await _forwarder.SendAsync(context, target).ConfigureAwait(false);
+        if (failure is null)
         {
             return;
         }
 
-        var exception = context.Features.Get<IForwarderErrorFeature>()?.Exception;
-        Log.ForwardFailed(_logger, exception, context.Request.Method, host, target.Port, error.ToString());
-        if (context.Response.HasStarted)
+        Log.ForwardFailed(_logger, failure.Exception, context.Request.Method, host, target.Port, failure.Stage);
+        if (!context.Response.HasStarted)
         {
-            return;
+            SetError(context, FindProxyError(failure.Exception) ?? failure.Error);
         }
-
-        var proxyError = FindProxyError(exception) ?? error switch
-        {
-            ForwarderError.RequestTimedOut => new(StatusCodes.Status504GatewayTimeout, ProxyErrorTypes.ConnectionTimeout, "Destination timed out."),
-            ForwarderError.Request => new(StatusCodes.Status502BadGateway, ProxyErrorTypes.DestinationUnavailable, "Destination is unavailable."),
-            ForwarderError.ResponseHeaders => new(StatusCodes.Status502BadGateway, ProxyErrorTypes.HttpResponseIncomplete, "Destination response was incomplete."),
-            _ => new ProxyError(context.Response.StatusCode >= 400 ? context.Response.StatusCode : StatusCodes.Status502BadGateway, ProxyErrorTypes.ProxyInternalError, "Proxy error."),
-        };
-        SetError(context, proxyError);
     }
 
     /// <summary>Writes a proxy error's status and <c>Proxy-Status</c> header to the response.</summary>

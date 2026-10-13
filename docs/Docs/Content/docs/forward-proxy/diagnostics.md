@@ -65,4 +65,4 @@ builder.Services.AddOpenTelemetry().WithMetrics(m => m.AddMeter("DamianH.Http.Fo
 
 Each tunnel creates a `ForwardProxy.Tunnel` activity from the
 `DamianH.Http.ForwardProxy` activity source, tagged with `server.address` and
-`server.port`. `http://` forwarding is traced by YARP and `HttpClient`.
+`server.port`. `http://` forwarding is traced by `HttpClient`.

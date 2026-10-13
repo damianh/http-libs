@@ -3,6 +3,7 @@
 
 using System.Net;
 using System.Net.Sockets;
+using System.Net.WebSockets;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -122,9 +123,34 @@ internal sealed class OriginHost : IAsyncDisposable
             }
         }));
         var app = builder.Build();
+        app.UseWebSockets();
         app.Run(async context =>
         {
             var request = context.Request;
+            if (context.WebSockets.IsWebSocketRequest)
+            {
+                using var socket = await context.WebSockets.AcceptWebSocketAsync();
+                var buffer = new byte[4096];
+                while (true)
+                {
+                    var received = await socket.ReceiveAsync(buffer, context.RequestAborted);
+                    if (received.MessageType == WebSocketMessageType.Close)
+                    {
+                        await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "bye", context.RequestAborted);
+                        return;
+                    }
+
+                    await socket.SendAsync(buffer.AsMemory(0, received.Count), received.MessageType, received.EndOfMessage, context.RequestAborted);
+                }
+            }
+
+            if (request.Query.ContainsKey("hop"))
+            {
+                context.Response.Headers.Connection = "X-Resp-Hop";
+                context.Response.Headers["X-Resp-Hop"] = "1";
+                context.Response.Headers["X-Resp-End"] = "1";
+            }
+
             var text = new StringBuilder()
                 .Append("method=").Append(request.Method).Append('\n')
                 .Append("path=").Append(request.Path).Append(request.QueryString).Append('\n')
@@ -132,6 +158,11 @@ internal sealed class OriginHost : IAsyncDisposable
                 .Append("via=").Append(request.Headers.Via.ToString()).Append('\n')
                 .Append("proxy-authorization=").Append(request.Headers.ProxyAuthorization.ToString()).Append('\n')
                 .Append("proxy-connection=").Append(request.Headers["Proxy-Connection"].ToString()).Append('\n');
+            foreach (var header in request.Headers.Where(h => h.Key.StartsWith("X-", StringComparison.OrdinalIgnoreCase)))
+            {
+                text.Append("header:").Append(header.Key.ToLowerInvariant()).Append('=').Append(header.Value.ToString()).Append('\n');
+            }
+
             if (request.ContentLength > 0 || request.Headers.TransferEncoding.Count > 0)
             {
                 using var reader = new StreamReader(request.Body);

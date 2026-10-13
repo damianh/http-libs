@@ -7,7 +7,8 @@ and destination rules.
 
 - HTTP/1.1 `CONNECT` tunnels (connection middleware) and HTTP/2 `CONNECT`
   tunnels (RFC 9113 §8.5).
-- Absolute-form `http://` forwarding through YARP's `IHttpForwarder`.
+- Absolute-form `http://` forwarding, including WebSocket upgrades. No reverse-proxy package dependency; the
+  forwarding core is adapted from [YARP](https://github.com/dotnet/yarp) (MIT, see `THIRD-PARTY-NOTICES.txt`).
 - Proxy authentication through ASP.NET Core authentication handlers and
   authorization policies, with `407`/`Proxy-Authenticate`. A `ProxyBasic`
   handler is included.

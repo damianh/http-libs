@@ -1,7 +1,11 @@
 // Copyright (c) Damian Hickey. All rights reserved.
 // See LICENSE in the project root for license information.
 
+using System.Net;
 using System.Net.Http;
+using System.Net.Sockets;
+using System.Net.WebSockets;
+using System.Text;
 using Shouldly;
 
 namespace DamianH.Http.ForwardProxy;
@@ -86,5 +90,67 @@ public class HttpForwardingTests
 
         ((int)response.StatusCode).ShouldBe(502);
         response.Headers.GetValues("Proxy-Status").ShouldBe(["forward-proxy; error=connection_refused"]);
+    }
+
+    [Fact]
+    public async Task StripsHeadersNamedInConnection()
+    {
+        await using var origin = await OriginHost.StartAsync();
+        await using var proxy = await ProxyHost.StartAsync();
+        using var client = ConnectTunnelTests.CreateClient(proxy);
+
+        // Kestrel keeps only "close"/"keep-alive" when a request Connection header lists either, so list custom tokens only.
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(origin.Uri, "/x?hop=1"));
+        request.Headers.Connection.Add("X-Hop");
+        request.Headers.Add("X-Hop", "secret");
+        request.Headers.Add("X-End", "kept");
+        using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        body.ShouldContain("header:x-end=kept\n");
+        body.ShouldNotContain("header:x-hop", Case.Sensitive);
+        response.Headers.GetValues("X-Resp-End").ShouldBe(["1"]);
+        response.Headers.Contains("X-Resp-Hop").ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task ForwardsChunkedRequestBodies()
+    {
+        await using var origin = await OriginHost.StartAsync();
+        await using var proxy = await ProxyHost.StartAsync();
+        using var socket = await RawProxy.ConnectAsync(proxy.Port);
+
+        await RawProxy.SendAsync(socket, $"POST http://127.0.0.1:{origin.Port}/upload HTTP/1.1\r\nHost: 127.0.0.1:{origin.Port}\r\nConnection: close\r\nTransfer-Encoding: chunked\r\n\r\n3\r\npay\r\n4\r\nload\r\n0\r\n\r\n");
+        var response = await RawProxy.ReadResponseAsync(socket);
+        var body = await RawProxy.ReadToEndAsync(socket, response.Body);
+
+        response.StatusCode.ShouldBe(200);
+        body.ShouldContain("body=payload\n");
+    }
+
+    [Fact]
+    public async Task ForwardsWebSocketUpgrades()
+    {
+        await using var origin = await OriginHost.StartAsync();
+        await using var proxy = await ProxyHost.StartAsync();
+        using var socket = await RawProxy.ConnectAsync(proxy.Port);
+        var ct = TestContext.Current.CancellationToken;
+
+        await RawProxy.SendAsync(socket, $"GET http://127.0.0.1:{origin.Port}/ws HTTP/1.1\r\nHost: 127.0.0.1:{origin.Port}\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n");
+        var response = await RawProxy.ReadResponseAsync(socket);
+
+        response.StatusCode.ShouldBe(101);
+        response.Header("Upgrade").ShouldBe("websocket");
+        response.Header("Sec-WebSocket-Accept").ShouldBe("s3pPLMBiTxaQ9kYGzzhZRbK+xOo=");
+        response.Header("Via").ShouldBe("1.1 forward-proxy");
+        using var client = WebSocket.CreateFromStream(new NetworkStream(socket), new WebSocketCreationOptions { IsServer = false });
+        await client.SendAsync(Encoding.UTF8.GetBytes("hello"), WebSocketMessageType.Text, endOfMessage: true, ct);
+        var buffer = new byte[64];
+        var received = await client.ReceiveAsync(buffer, ct);
+        await client.CloseAsync(WebSocketCloseStatus.NormalClosure, "done", ct);
+
+        Encoding.UTF8.GetString(buffer, 0, received.Count).ShouldBe("hello");
+        client.CloseStatus.ShouldBe(WebSocketCloseStatus.NormalClosure);
     }
 }

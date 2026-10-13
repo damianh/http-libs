@@ -67,10 +67,13 @@ public sealed class ForwardProxyOptions
     /// <summary>Time allowed to resolve and connect to a destination. Defaults to 10 seconds.</summary>
     public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(10);
 
-    /// <summary>A tunnel with no traffic in either direction for this long is closed. Defaults to 5 minutes.</summary>
+    /// <summary>
+    /// A tunnel (including an upgraded WebSocket connection) with no traffic in either direction for this long is
+    /// closed. Defaults to 5 minutes.
+    /// </summary>
     public TimeSpan TunnelIdleTimeout { get; set; } = TimeSpan.FromMinutes(5);
 
-    /// <summary>Activity timeout for forwarded HTTP requests (YARP <c>ActivityTimeout</c>). Defaults to 100 seconds.</summary>
+    /// <summary>Maximum time without progress (sending the request, receiving response headers or body data) when forwarding <c>http://</c> requests. Defaults to 100 seconds.</summary>
     public TimeSpan HttpActivityTimeout { get; set; } = TimeSpan.FromSeconds(100);
 
     /// <summary>Time allowed for a client to send an HTTP/1.1 <c>CONNECT</c> request head. Defaults to 30 seconds.</summary>

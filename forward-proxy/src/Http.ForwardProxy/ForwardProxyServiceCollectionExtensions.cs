@@ -27,7 +27,6 @@ public static class ForwardProxyServiceCollectionExtensions
         builder.ValidateOnStart();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<ForwardProxyOptions>, ForwardProxyOptionsValidator>());
 
-        services.AddHttpForwarder();
         services.AddAuthenticationCore();
         services.AddAuthorization();
         services.AddMetrics();
