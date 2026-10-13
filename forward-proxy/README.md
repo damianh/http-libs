@@ -15,6 +15,9 @@ and destination rules.
 - Secure by default: only ports 443 (`CONNECT`) and 80 (`http://`), and private,
   loopback, link-local (cloud metadata) and other non-public addresses are
   blocked after DNS resolution, so DNS rebinding cannot bypass them.
+- Optional TLS interception of selected `CONNECT` tunnels (HTTP/1.1 and
+  HTTP/2) with your own certificate provider, so middleware or request
+  transforms can modify requests, for example to inject credentials.
 - RFC 9209 `Proxy-Status` errors, `Via`, logs, metrics and traces.
 
 ## Installation
@@ -68,4 +71,5 @@ it** and logs a warning at startup. Never expose an open proxy to the internet.
 - [Destination policy](https://damianh.github.io/http-libs/docs/forward-proxy/destination-policy/)
 - [Authentication and authorization](https://damianh.github.io/http-libs/docs/forward-proxy/authentication/)
 - [Errors and diagnostics](https://damianh.github.io/http-libs/docs/forward-proxy/diagnostics/)
+- [TLS interception](https://damianh.github.io/http-libs/docs/forward-proxy/tls-interception/)
 - [Deployment safety](https://damianh.github.io/http-libs/docs/forward-proxy/deployment-safety/)

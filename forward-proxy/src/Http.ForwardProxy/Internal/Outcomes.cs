@@ -9,4 +9,5 @@ internal static class Outcomes
     public const string Unauthorized = "unauthorized";
     public const string Denied = "denied";
     public const string Error = "error";
+    public const string Intercepted = "intercepted";
 }

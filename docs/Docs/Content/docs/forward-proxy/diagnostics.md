@@ -26,14 +26,17 @@ Connection: close
 |---|---|---|
 | 400 | `http_request_error` | Malformed request or target, absolute-form `https://`, userinfo in target |
 | 403 | `http_request_denied` | Port, host rule or `IForwardProxyDestinationFilter` denied |
+| 421 | `http_request_denied` | Intercepted request's `Host` does not match the `CONNECT` target |
 | 403 | `destination_ip_prohibited` | Target IP or every resolved address is blocked |
 | 502 | `dns_error` | Name did not resolve |
 | 502 | `connection_refused` | Destination refused the connection |
 | 502 | `destination_ip_unroutable`, `destination_unavailable` | Network unreachable or other connect failure |
-| 502 | `http_response_incomplete` | Destination response was invalid (`http://` only) |
+| 502 | `http_response_incomplete` | Destination response was invalid (`http://` and intercepted requests) |
+| 502 | `tls_certificate_error` | Destination's certificate failed validation (intercepted requests) |
+| 502 | `tls_protocol_error` | TLS with the destination failed (intercepted requests) |
 | 500 | `proxy_internal_error` | Unexpected proxy failure (logged) |
 | 503 | `connection_limit_reached` | `MaxConcurrentTunnels` reached (`CONNECT` or WebSocket upgrade) |
-| 504 | `connection_timeout` | `ConnectTimeout` elapsed (including DNS), or `HttpActivityTimeout` for `http://` |
+| 504 | `connection_timeout` | `ConnectTimeout` elapsed (including DNS), or `HttpActivityTimeout` for `http://` and intercepted requests |
 
 `407` and authorization `403` responses come from the authentication handler
 and do not carry `Proxy-Status`. Set `AddProxyStatusHeader = false` to omit the
@@ -46,15 +49,18 @@ Logs use the categories `DamianH.Http.ForwardProxy.Internal.*`. Rejections
 (`Information`) include the request kind, host, port, status and reason.
 Tunnel closure (`Information`) includes duration and bytes in each direction.
 Upgraded WebSocket connections are tunnels too, in logs, metrics and traces.
+Intercepted tunnels log at `Information` when they open, and a missing or
+failing interception certificate logs a `Warning`.
 An open proxy logs a `Warning` at startup.
 
 ## Metrics
 
-Meter `DamianH.Http.ForwardProxy`:
+Meter `DamianH.Http.ForwardProxy`. An intercepted tunnel counts as
+`connect`/`intercepted`, and each request inside it as `intercepted`:
 
 | Instrument | Type | Tags |
 |---|---|---|
-| `forward_proxy.requests` | Counter | `forward_proxy.kind` (`connect`, `http`), `forward_proxy.outcome` (`allowed`, `unauthorized`, `denied`, `error`) |
+| `forward_proxy.requests` | Counter | `forward_proxy.kind` (`connect`, `http`, `intercepted`), `forward_proxy.outcome` (`allowed`, `intercepted`, `unauthorized`, `denied`, `error`) |
 | `forward_proxy.tunnels.active` | UpDownCounter | |
 | `forward_proxy.tunnel.bytes` | Counter (bytes) | `forward_proxy.direction` (`upstream`, `downstream`) |
 | `forward_proxy.tunnel.duration` | Histogram (s) | |
@@ -67,4 +73,5 @@ builder.Services.AddOpenTelemetry().WithMetrics(m => m.AddMeter("DamianH.Http.Fo
 
 Each tunnel creates a `ForwardProxy.Tunnel` activity from the
 `DamianH.Http.ForwardProxy` activity source, tagged with `server.address` and
-`server.port`. `http://` forwarding is traced by `HttpClient`.
+`server.port`. `http://` forwarding and intercepted requests are traced by
+`HttpClient`.

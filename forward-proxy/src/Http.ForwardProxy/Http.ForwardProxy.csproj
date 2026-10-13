@@ -7,7 +7,7 @@
     <MinVerTagPrefix>fwdproxy-v</MinVerTagPrefix>
     <PackageId>DamianH.Http.ForwardProxy</PackageId>
     <Authors>Damian Hickey</Authors>
-    <Description>HTTP forward (egress) proxy for ASP.NET Core and Kestrel: CONNECT tunnelling over HTTP/1.1 and HTTP/2, absolute-form HTTP forwarding, proxy authentication and SSRF-safe destination policy.</Description>
+    <Description>HTTP forward (egress) proxy for ASP.NET Core and Kestrel: CONNECT tunnelling over HTTP/1.1 and HTTP/2, absolute-form HTTP forwarding, optional TLS interception, proxy authentication and SSRF-safe destination policy.</Description>
     <PackageTags>http;aspnetcore;kestrel;proxy;forward-proxy;egress;connect</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/damianh/http-libs</PackageProjectUrl>

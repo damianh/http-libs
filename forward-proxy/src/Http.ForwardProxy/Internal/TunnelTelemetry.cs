@@ -14,23 +14,34 @@ internal sealed class TunnelTelemetry
     private readonly ForwardProxyDestination _destination;
     private readonly Activity? _activity;
     private readonly long _started;
+    private readonly bool _recordMetrics;
 
-    public TunnelTelemetry(ForwardProxyMetrics metrics, ILogger logger, ForwardProxyDestination destination)
+    // recordMetrics is false for a tunnel nested in an intercepted tunnel, whose metrics already cover it.
+    public TunnelTelemetry(ForwardProxyMetrics metrics, ILogger logger, ForwardProxyDestination destination, bool recordMetrics = true)
     {
+        _recordMetrics = recordMetrics;
         _metrics = metrics;
         _logger = logger;
         _destination = destination;
         _activity = ForwardProxyMetrics.ActivitySource.StartActivity("ForwardProxy.Tunnel", ActivityKind.Internal);
         _activity?.SetTag("server.address", destination.Host);
         _activity?.SetTag("server.port", destination.Port);
-        metrics.TunnelOpened();
+        if (recordMetrics)
+        {
+            metrics.TunnelOpened();
+        }
+
         _started = Stopwatch.GetTimestamp();
     }
 
     public void Complete(long bytesUpstream, long bytesDownstream, bool idleTimedOut)
     {
         var elapsed = Stopwatch.GetElapsedTime(_started);
-        _metrics.TunnelClosed(elapsed.TotalSeconds, bytesUpstream, bytesDownstream);
+        if (_recordMetrics)
+        {
+            _metrics.TunnelClosed(elapsed.TotalSeconds, bytesUpstream, bytesDownstream);
+        }
+
         if (idleTimedOut)
         {
             Log.TunnelIdleTimeout(_logger, _destination.Host, _destination.Port);

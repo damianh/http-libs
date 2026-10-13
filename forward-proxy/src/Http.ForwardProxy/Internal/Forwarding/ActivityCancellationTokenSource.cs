@@ -69,6 +69,14 @@ internal sealed class ActivityCancellationTokenSource : CancellationTokenSource
         }
     }
 
+    /// <summary>Changes the activity timeout and restarts it.</summary>
+    public void SetActivityTimeout(TimeSpan activityTimeout)
+    {
+        _activityTimeoutMs = (int)activityTimeout.TotalMilliseconds;
+        _lastTimeoutTicks = (uint)Environment.TickCount;
+        CancelAfter(_activityTimeoutMs);
+    }
+
     public void Return()
     {
         _linkedRegistration.Dispose();

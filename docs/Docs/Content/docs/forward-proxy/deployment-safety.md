@@ -2,7 +2,7 @@
 title: Forward proxy deployment safety
 sidebarLabel: Deployment safety
 description: Avoid open proxies and SSRF when deploying the forward proxy.
-order: 5
+order: 6
 section: Forward Proxy
 ---
 
@@ -39,6 +39,13 @@ Proxy Basic credentials are clear text on a plain-text listener. Use a TLS
 listener (`listen.UseHttps()` before `listen.UseForwardProxy()`) when clients
 cross untrusted networks. Clients configure an `https://` proxy URL for this.
 
+## Protect the interception CA
+
+With [TLS interception](../tls-interception/), clients trust a CA whose private
+key the proxy holds. Anyone with that key can impersonate any site to those
+clients. Use a CA dedicated to the proxy, keep its key in a secret store or
+HSM, and select only the destinations you need to decrypt.
+
 ## Limit resources
 
 Each tunnel, `CONNECT` or WebSocket upgrade, holds two connections. Tune `MaxConcurrentTunnels`,
@@ -48,8 +55,10 @@ Each tunnel, `CONNECT` or WebSocket upgrade, holds two connections. Tune `MaxCon
 
 ## What the proxy does not do
 
-- It does not inspect tunnelled traffic. `CONNECT` tunnels are opaque; policy
-  applies to the requested host and port only. A client can tunnel to an
-  allowed host and send a different TLS SNI or `Host` header within the tunnel.
+- It does not inspect tunnelled traffic unless you enable
+  [TLS interception](../tls-interception/) for the tunnel. Other `CONNECT`
+  tunnels are opaque; policy applies to the requested host and port only. A
+  client can tunnel to an allowed host and send a different TLS SNI or `Host`
+  header within the tunnel.
 - It does not cache responses or add `Forwarded`/`X-Forwarded-For` headers.
 - It does not support HTTP/3 `CONNECT`, `CONNECT-UDP` or `CONNECT-IP`.

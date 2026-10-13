@@ -58,7 +58,7 @@ public class Http2ConnectTests
         error.ShouldContain("header: proxy-status: forward-proxy; error=destination_ip_prohibited");
     }
 
-    private static async Task<(int ExitCode, string Output, string Error)> CurlAsync(params string[] args)
+    internal static async Task<(int ExitCode, string Output, string Error)> CurlAsync(params string[] args)
     {
         if (!await SupportsProxyHttp2Async())
         {

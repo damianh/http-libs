@@ -18,5 +18,7 @@ internal static class ProxyErrorTypes
     public const string HttpRequestError = "http_request_error";
     public const string HttpRequestDenied = "http_request_denied";
     public const string HttpResponseIncomplete = "http_response_incomplete";
+    public const string TlsProtocolError = "tls_protocol_error";
+    public const string TlsCertificateError = "tls_certificate_error";
     public const string ProxyInternalError = "proxy_internal_error";
 }

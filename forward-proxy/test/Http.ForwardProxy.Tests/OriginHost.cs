@@ -28,7 +28,7 @@ internal sealed class OriginHost : IAsyncDisposable
 
     public Uri Uri { get; }
 
-    public static async Task<OriginHost> StartAsync(bool tls = false)
+    public static async Task<OriginHost> StartAsync(bool tls = false, RequestDelegate? handler = null)
     {
         var builder = WebApplication.CreateSlimBuilder();
         builder.Logging.SetMinimumLevel(LogLevel.Warning);
@@ -41,7 +41,7 @@ internal sealed class OriginHost : IAsyncDisposable
         }));
         var app = builder.Build();
         app.UseWebSockets();
-        app.Run(async context =>
+        app.Run(handler ?? (async context =>
         {
             var request = context.Request;
             if (context.WebSockets.IsWebSocketRequest)
@@ -73,6 +73,7 @@ internal sealed class OriginHost : IAsyncDisposable
                 .Append("path=").Append(request.Path).Append(request.QueryString).Append('\n')
                 .Append("host=").Append(request.Host).Append('\n')
                 .Append("via=").Append(request.Headers.Via.ToString()).Append('\n')
+                .Append("authorization=").Append(request.Headers.Authorization.ToString()).Append('\n')
                 .Append("proxy-authorization=").Append(request.Headers.ProxyAuthorization.ToString()).Append('\n')
                 .Append("proxy-connection=").Append(request.Headers["Proxy-Connection"].ToString()).Append('\n');
             foreach (var header in request.Headers.Where(h => h.Key.StartsWith("X-", StringComparison.OrdinalIgnoreCase)))
@@ -87,7 +88,7 @@ internal sealed class OriginHost : IAsyncDisposable
             }
 
             await context.Response.WriteAsync(text.ToString(), context.RequestAborted);
-        });
+        }));
         await app.StartAsync(TestContext.Current.CancellationToken);
         return new OriginHost(app, ProxyHost.GetPort(app), tls);
     }

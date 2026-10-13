@@ -9,7 +9,10 @@ using Microsoft.Net.Http.Headers;
 
 namespace DamianH.Http.ForwardProxy.Internal;
 
-/// <summary>Handles HTTP/2 CONNECT tunnels and absolute-form <c>http://</c> requests in the request pipeline.</summary>
+/// <summary>
+/// Handles HTTP/2 CONNECT tunnels, absolute-form <c>http://</c> requests and requests received inside intercepted
+/// tunnels in the request pipeline.
+/// </summary>
 internal sealed class ForwardProxyMiddleware(RequestDelegate next, ForwardProxyHandler handler, ILogger<ForwardProxyMiddleware> logger)
 {
     private static readonly UriCreationOptions RawPathAndQuery = new() { DangerousDisablePathAndQueryCanonicalization = true };
@@ -43,6 +46,11 @@ internal sealed class ForwardProxyMiddleware(RequestDelegate next, ForwardProxyH
     private Task InvokeCoreAsync(HttpContext context)
     {
         var requestFeature = context.Features.Get<IHttpRequestFeature>()!;
+        if (context.Features.Get<IForwardProxyInterceptionFeature>() is { } interception)
+        {
+            return HandleProxyRequestAsync(context, ForwardInterceptedAsync(context, interception.Destination, requestFeature.RawTarget));
+        }
+
         if (HttpMethods.IsConnect(context.Request.Method))
         {
             if (context.Features.Get<IHttpExtendedConnectFeature>()?.IsExtendedConnect == true)
@@ -79,6 +87,43 @@ internal sealed class ForwardProxyMiddleware(RequestDelegate next, ForwardProxyH
         }
 
         return next(context);
+    }
+
+    /// <summary>Forwards a request received inside an intercepted tunnel to the tunnel's destination.</summary>
+    private Task ForwardInterceptedAsync(HttpContext context, ForwardProxyDestination destination, string rawTarget)
+    {
+        // Only origin-form requests to the tunnel's destination: the client believes it is talking to the origin.
+        if (HttpMethods.IsConnect(context.Request.Method) || !rawTarget.StartsWith('/'))
+        {
+            handler.RejectIntercepted(context, destination, ProxyError.BadTarget("Only origin-form requests are supported in an intercepted tunnel."));
+            return Task.CompletedTask;
+        }
+
+        if (!IsDestinationHost(context.Request.Host, destination))
+        {
+            handler.RejectIntercepted(context, destination, new(StatusCodes.Status421MisdirectedRequest, ProxyErrorTypes.HttpRequestDenied, "Host does not match the tunnel's destination."));
+            return Task.CompletedTask;
+        }
+
+        var host = destination.Host.Contains(':', StringComparison.Ordinal) ? $"[{destination.Host}]" : destination.Host;
+        if (!Uri.TryCreate($"https://{host}:{destination.Port}{rawTarget}", RawPathAndQuery, out var target))
+        {
+            handler.RejectIntercepted(context, destination, ProxyError.BadTarget("Invalid request target."));
+            return Task.CompletedTask;
+        }
+
+        return handler.ForwardInterceptedAsync(context, destination, target);
+    }
+
+    private static bool IsDestinationHost(HostString host, ForwardProxyDestination destination)
+    {
+        if (!host.HasValue)
+        {
+            return true;
+        }
+
+        var authority = host.Port is null ? $"{host.Value}:443" : host.Value;
+        return AuthorityParser.TryParse(authority, out var name, out var port) && name == destination.Host && port == destination.Port;
     }
 
     /// <summary>
@@ -137,6 +182,6 @@ internal sealed class ForwardProxyMiddleware(RequestDelegate next, ForwardProxyH
         context.Features.Get<IHttpResponseBodyFeature>()?.DisableBuffering();
         await context.Response.StartAsync(context.RequestAborted).ConfigureAwait(false);
         await context.Response.Body.FlushAsync(context.RequestAborted).ConfigureAwait(false);
-        await tunnel.RunAsync(context.Request.BodyReader, context.Response.BodyWriter, context.RequestAborted).ConfigureAwait(false);
+        await tunnel.RunAsync(context.Request.BodyReader, context.Response.BodyWriter, context.RequestAborted, context, context.RequestAborted, context.Abort).ConfigureAwait(false);
     }
 }

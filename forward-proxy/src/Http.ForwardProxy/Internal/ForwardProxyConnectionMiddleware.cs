@@ -63,7 +63,7 @@ internal sealed class ForwardProxyConnectionMiddleware(ConnectionDelegate next, 
 
         if (passThrough)
         {
-            ObserveRequestHeads(connection);
+            ObserveRequestHeads(connection, serverOptions);
             await next(connection).ConfigureAwait(false);
             return;
         }
@@ -160,7 +160,8 @@ internal sealed class ForwardProxyConnectionMiddleware(ConnectionDelegate next, 
             // Kestrel signals ConnectionClosed when the client half-closes, so it can't bound the tunnel; the tunnel
             // ends when either side closes, a write fails, or the idle timeout elapses.
             await output.WriteAsync(TunnelEstablished).ConfigureAwait(false);
-            await tunnel.RunAsync(connection.Transport.Input, output, CancellationToken.None).ConfigureAwait(false);
+            // An intercepted tunnel is served like a socket connection, which Kestrel closes on the same signal.
+            await tunnel.RunAsync(connection.Transport.Input, output, CancellationToken.None, context, connection.ConnectionClosed, connection.Abort).ConfigureAwait(false);
         }
     }
 
@@ -169,7 +170,7 @@ internal sealed class ForwardProxyConnectionMiddleware(ConnectionDelegate next, 
     /// dropping the other options it lists. Observe the raw request heads so those options' headers can still be
     /// removed before forwarding.
     /// </summary>
-    private void ObserveRequestHeads(ConnectionContext connection)
+    internal static void ObserveRequestHeads(ConnectionContext connection, KestrelServerOptions serverOptions)
     {
         var limits = serverOptions.Limits;
         var observer = new Http1RequestHeadObserver(connection.Transport.Input, Math.Max(limits.MaxRequestLineSize, limits.MaxRequestHeadersTotalSize));
@@ -262,6 +263,6 @@ internal sealed class ForwardProxyConnectionMiddleware(ConnectionDelegate next, 
             || string.Equals(name, HeaderNames.TransferEncoding, StringComparison.OrdinalIgnoreCase)
             || string.Equals(name, HeaderNames.Connection, StringComparison.OrdinalIgnoreCase);
 
-    private static bool IsHttp2Alpn(ConnectionContext connection) =>
+    internal static bool IsHttp2Alpn(ConnectionContext connection) =>
         connection.Features.Get<ITlsApplicationProtocolFeature>()?.ApplicationProtocol.Span.SequenceEqual(SslApplicationProtocol.Http2.Protocol.Span) == true;
 }
