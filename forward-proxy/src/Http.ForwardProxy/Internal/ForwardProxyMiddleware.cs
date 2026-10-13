@@ -52,7 +52,7 @@ internal sealed class ForwardProxyMiddleware(RequestDelegate next, ForwardProxyH
 
             if (HttpProtocol.IsHttp2(context.Request.Protocol))
             {
-                return TunnelAsync(context, requestFeature.RawTarget);
+                return HandleProxyRequestAsync(context, TunnelAsync(context, requestFeature.RawTarget));
             }
 
             if (HttpProtocol.IsHttp11(context.Request.Protocol) || HttpProtocol.IsHttp10(context.Request.Protocol))
@@ -75,10 +75,38 @@ internal sealed class ForwardProxyMiddleware(RequestDelegate next, ForwardProxyH
                 return Task.CompletedTask;
             }
 
-            return handler.ForwardHttpAsync(context, target);
+            return HandleProxyRequestAsync(context, handler.ForwardHttpAsync(context, target));
         }
 
         return next(context);
+    }
+
+    /// <summary>
+    /// Turns an unexpected failure while the proxy handles a request into a <c>proxy_internal_error</c> response, or an
+    /// aborted connection once the response has started, as the HTTP/1.1 CONNECT path does.
+    /// </summary>
+    private async Task HandleProxyRequestAsync(HttpContext context, Task proxyTask)
+    {
+        try
+        {
+            await proxyTask.ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+        {
+            // The client went away; there is nobody to report the failure to.
+        }
+        catch (Exception ex)
+        {
+            Log.ProxyRequestFailed(logger, ex, context.Request.Method, context.Connection.Id);
+            if (context.Response.HasStarted)
+            {
+                context.Abort();
+                return;
+            }
+
+            context.Response.Clear();
+            handler.SetError(context, new ProxyError(StatusCodes.Status500InternalServerError, ProxyErrorTypes.ProxyInternalError, "Proxy error."));
+        }
     }
 
     private async Task TunnelAsync(HttpContext context, string target)

@@ -52,10 +52,10 @@ internal sealed class EchoServer : IDisposable
                 int read;
                 while ((read = await socket.ReceiveAsync(buffer)) > 0)
                 {
-                    await socket.SendAsync(buffer.AsMemory(0, read));
+                    await socket.SendAllAsync(buffer.AsMemory(0, read));
                 }
 
-                await socket.SendAsync("BYE"u8.ToArray());
+                await socket.SendAllAsync("BYE"u8.ToArray());
                 socket.Shutdown(SocketShutdown.Both);
             }
             catch (SocketException)

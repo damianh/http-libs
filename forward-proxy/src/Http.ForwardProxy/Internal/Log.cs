@@ -39,4 +39,7 @@ internal static partial class Log
 
     [LoggerMessage(11, LogLevel.Error, "Handling CONNECT request on connection {ConnectionId} failed.")]
     public static partial void ConnectFailed(ILogger logger, Exception exception, string connectionId);
+
+    [LoggerMessage(12, LogLevel.Error, "Handling {Method} proxy request on connection {ConnectionId} failed.")]
+    public static partial void ProxyRequestFailed(ILogger logger, Exception exception, string method, string connectionId);
 }

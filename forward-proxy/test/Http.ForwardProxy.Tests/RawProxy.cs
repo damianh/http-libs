@@ -19,7 +19,7 @@ internal static class RawProxy
     }
 
     public static async Task SendAsync(Socket socket, string text) =>
-        await socket.SendAsync(Encoding.Latin1.GetBytes(text), TestContext.Current.CancellationToken);
+        await socket.SendAllAsync(Encoding.Latin1.GetBytes(text), TestContext.Current.CancellationToken);
 
     /// <summary>Reads a response head (through the blank line) and returns it with any body bytes read so far.</summary>
     public static async Task<RawResponse> ReadResponseAsync(Socket socket)

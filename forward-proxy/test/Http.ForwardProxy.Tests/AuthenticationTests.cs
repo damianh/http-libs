@@ -132,6 +132,21 @@ public class AuthenticationTests
         (await RawProxy.ReadResponseAsync(socket)).StatusCode.ShouldBe(407);
     }
 
+    [Theory]
+    [InlineData("CONNECT example.com:443 HTTP/1.1\r\nHost: example.com:443\r\n\r\n")]
+    [InlineData("GET http://example.com/ HTTP/1.1\r\nHost: example.com\r\n\r\n")]
+    public async Task MissingNamedPolicyIsAProxyInternalError(string request)
+    {
+        await using var proxy = await ProxyHost.StartAsync(o => o.AuthorizationPolicyName = "missing");
+        using var socket = await RawProxy.ConnectAsync(proxy.Port);
+
+        await RawProxy.SendAsync(socket, request);
+        var response = await RawProxy.ReadResponseAsync(socket);
+
+        response.StatusCode.ShouldBe(500);
+        response.Header("Proxy-Status").ShouldContain("error=proxy_internal_error");
+    }
+
     private static Task<ProxyHost> StartBasicProxyAsync(Action<AuthorizationPolicyBuilder>? configurePolicy = null) =>
         ProxyHost.StartAsync(
             o =>
