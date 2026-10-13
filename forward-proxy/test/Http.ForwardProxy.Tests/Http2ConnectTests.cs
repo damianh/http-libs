@@ -8,6 +8,8 @@ namespace DamianH.Http.ForwardProxy;
 
 /// <summary>
 /// .NET's HttpClient cannot send a classic HTTP/2 CONNECT, so these tests use curl's <c>--proxy-http2</c>.
+/// Assertions rely on curl's <c>h2-proxy</c> trace output, which is stable across curl versions, rather than
+/// its informational messages, which are reworded between releases (e.g. 8.5 vs 8.22).
 /// </summary>
 public class Http2ConnectTests
 {
@@ -18,12 +20,12 @@ public class Http2ConnectTests
         await using var proxy = await ProxyHost.StartAsync(tls: true);
 
         var (exitCode, output, error) = await CurlAsync(
-            "-sS", "-v", "--proxy", $"https://127.0.0.1:{proxy.Port}", "--proxy-insecure", "--proxy-http2", "-k",
-            new Uri(origin.Uri, "/h2").ToString());
+            "-sS", "-v", "--trace-config", "h2-proxy", "--proxy", $"https://127.0.0.1:{proxy.Port}", "--proxy-insecure",
+            "--proxy-http2", "-k", new Uri(origin.Uri, "/h2").ToString());
 
         exitCode.ShouldBe(0, error);
         output.ShouldContain("path=/h2");
-        error.ShouldContain("Establishing HTTP/2 proxy tunnel");
+        error.ShouldContain("status: HTTP/2 200");
         error.ShouldContain("CONNECT tunnel established, response 200");
     }
 
@@ -48,20 +50,19 @@ public class Http2ConnectTests
         await using var proxy = await ProxyHost.StartAsync(o => o.AllowedNetworks.Clear(), tls: true);
 
         var (exitCode, _, error) = await CurlAsync(
-            "-sS", "-v", "--proxy", $"https://127.0.0.1:{proxy.Port}", "--proxy-insecure", "--proxy-http2", "-k",
-            new Uri(origin.Uri, "/h2").ToString());
+            "-sS", "-v", "--trace-config", "h2-proxy", "--proxy", $"https://127.0.0.1:{proxy.Port}", "--proxy-insecure",
+            "--proxy-http2", "-k", new Uri(origin.Uri, "/h2").ToString());
 
         exitCode.ShouldNotBe(0);
-        error.ShouldContain("Establishing HTTP/2 proxy tunnel");
-        error.ShouldContain("CONNECT Response Status 403");
-        error.ShouldContain("proxy-status: forward-proxy; error=destination_ip_prohibited");
+        error.ShouldContain("status: HTTP/2 403");
+        error.ShouldContain("header: proxy-status: forward-proxy; error=destination_ip_prohibited");
     }
 
     private static async Task<(int ExitCode, string Output, string Error)> CurlAsync(params string[] args)
     {
         if (!await SupportsProxyHttp2Async())
         {
-            Assert.Skip("curl with --proxy-http2 support is not available.");
+            Assert.Skip("curl with --proxy-http2 and --trace-config support is not available.");
         }
 
         var startInfo = new ProcessStartInfo("curl", args)
@@ -83,7 +84,8 @@ public class Http2ConnectTests
             using var process = Process.Start(new ProcessStartInfo("curl", ["--help", "all"]) { RedirectStandardOutput = true, RedirectStandardError = true })!;
             var help = await process.StandardOutput.ReadToEndAsync(TestContext.Current.CancellationToken);
             await process.WaitForExitAsync(TestContext.Current.CancellationToken);
-            return help.Contains("--proxy-http2", StringComparison.Ordinal);
+            return help.Contains("--proxy-http2", StringComparison.Ordinal)
+                && help.Contains("--trace-config", StringComparison.Ordinal);
         }
         catch (System.ComponentModel.Win32Exception)
         {
