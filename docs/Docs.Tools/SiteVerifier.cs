@@ -243,7 +243,7 @@ internal sealed partial class SiteVerifier
     private void CheckReadmes()
     {
         var sourceReadmes = new List<string> { Path.Combine(repo, "README.md") };
-        foreach (var directory in new[] { "hybrid-cache-handler", "file-distributed-cache", "structured-field-values", "signatures", "forwarded-headers" })
+        foreach (var directory in new[] { "hybrid-cache-handler", "file-distributed-cache", "structured-field-values", "signatures", "forwarded-headers", "forward-proxy" })
         {
             var path = Path.Combine(repo, directory);
             if (Directory.Exists(path))

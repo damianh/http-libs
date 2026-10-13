@@ -27,6 +27,7 @@ public static class DocsSetup
             new() { Label = "Structured field values", AutoGenerate = "structured-field-values" },
             new() { Label = "HTTP signatures", AutoGenerate = "signatures" },
             new() { Label = "Forwarded headers", AutoGenerate = "forwarded-headers" },
+            new() { Label = "Forward proxy", AutoGenerate = "forward-proxy" },
             new() { Label = "Contributing", Link = "/docs/contributing/" },
         ],
     };

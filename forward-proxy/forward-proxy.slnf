@@ -1,0 +1,10 @@
+{
+  "solution": {
+    "path": "..\\http-lib.slnx",
+    "projects": [
+      "forward-proxy\\src\\Http.ForwardProxy\\Http.ForwardProxy.csproj",
+      "forward-proxy\\test\\Http.ForwardProxy.Tests\\Http.ForwardProxy.Tests.csproj",
+      "forward-proxy\\samples\\ForwardProxySample\\ForwardProxySample.csproj"
+    ]
+  }
+}
