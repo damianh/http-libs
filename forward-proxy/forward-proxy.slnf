@@ -4,7 +4,11 @@
     "projects": [
       "forward-proxy\\src\\Http.ForwardProxy\\Http.ForwardProxy.csproj",
       "forward-proxy\\test\\Http.ForwardProxy.Tests\\Http.ForwardProxy.Tests.csproj",
-      "forward-proxy\\samples\\ForwardProxySample\\ForwardProxySample.csproj"
+      "forward-proxy\\samples\\ForwardProxySample\\ForwardProxySample.csproj",
+      "forward-proxy\\samples\\EstInterception\\EstInterception.AppHost\\EstInterception.AppHost.csproj",
+      "forward-proxy\\samples\\EstInterception\\EstInterception.CaHost\\EstInterception.CaHost.csproj",
+      "forward-proxy\\samples\\EstInterception\\EstInterception.Proxy\\EstInterception.Proxy.csproj",
+      "forward-proxy\\samples\\EstInterception\\EstInterception.ServiceDefaults\\EstInterception.ServiceDefaults.csproj"
     ]
   }
 }

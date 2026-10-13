@@ -20,6 +20,10 @@
   </Folder>
   <Folder Name="/forward-proxy/samples/">
     <Project Path="forward-proxy/samples/ForwardProxySample/ForwardProxySample.csproj" />
+    <Project Path="forward-proxy/samples/EstInterception/EstInterception.AppHost/EstInterception.AppHost.csproj" />
+    <Project Path="forward-proxy/samples/EstInterception/EstInterception.CaHost/EstInterception.CaHost.csproj" />
+    <Project Path="forward-proxy/samples/EstInterception/EstInterception.Proxy/EstInterception.Proxy.csproj" />
+    <Project Path="forward-proxy/samples/EstInterception/EstInterception.ServiceDefaults/EstInterception.ServiceDefaults.csproj" />
   </Folder>
   <Folder Name="/structured-field-values/">
   </Folder>

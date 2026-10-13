@@ -163,6 +163,26 @@ Clients must trust the CA. For example, add it to the operating system's trust
 store, or point the client at it with `SSL_CERT_FILE`, `NODE_EXTRA_CA_CERTS`,
 `REQUESTS_CA_BUNDLE` or `curl --cacert`.
 
+### Keep the CA key out of the proxy
+
+For a production design, keep the CA private key in a dedicated certificate
+service and let the proxy request destination certificates over an enrollment
+protocol such as EST. The proxy then needs only enrollment credentials and the
+CA's public trust certificate; compromise of the proxy does not directly expose
+the CA signing key.
+
+The [EST interception sample](../../../../../forward-proxy/samples/EstInterception/)
+uses [OpenCertServer](https://github.com/jjrdk/opencertserver) as the CA service.
+Its proxy posts a PKCS#10 request with the destination's SAN to EST, caches the
+issued leaf certificate, and never receives the CA private key. The CA host
+restricts issuance to a configured host allowlist.
+
+The sample is a development example, not a hardened CA deployment. OpenCertServer
+also [documents](https://github.com/jjrdk/opencertserver) that its CA server is
+not production-ready without additional deployment-specific policy and hardening.
+Review its certificate policy and security posture before using it for real
+traffic.
+
 ## Modifying requests
 
 There are two places to change an intercepted request.

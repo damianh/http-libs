@@ -44,7 +44,11 @@ cross untrusted networks. Clients configure an `https://` proxy URL for this.
 With [TLS interception](../tls-interception/), clients trust a CA whose private
 key the proxy holds. Anyone with that key can impersonate any site to those
 clients. Use a CA dedicated to the proxy, keep its key in a secret store or
-HSM, and select only the destinations you need to decrypt.
+HSM, and select only the destinations you need to decrypt. For stronger key
+isolation, keep the CA in a separate certificate service and issue destination
+certificates to the proxy over an enrollment protocol such as EST. The
+[interception sample](../../../../../forward-proxy/samples/EstInterception/)
+demonstrates this pattern; it is an example, not a production CA deployment.
 
 ## Limit resources
 
