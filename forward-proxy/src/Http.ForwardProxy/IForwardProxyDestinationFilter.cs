@@ -7,8 +7,9 @@ namespace DamianH.Http.ForwardProxy;
 
 /// <summary>
 /// Custom destination rule, evaluated after authorization and the built-in host and port rules. Register
-/// implementations in DI; every registered filter must allow a destination. IP address rules are enforced separately
-/// at connect time.
+/// implementations in DI with any lifetime; they are resolved from <see cref="HttpContext.RequestServices"/> for each
+/// request, and every registered filter must allow a destination. IP address rules are enforced separately at connect
+/// time.
 /// </summary>
 public interface IForwardProxyDestinationFilter
 {

@@ -10,9 +10,9 @@ internal sealed class ForwardProxyOptionsValidator : IValidateOptions<ForwardPro
     public ValidateOptionsResult Validate(string? name, ForwardProxyOptions options)
     {
         var failures = new List<string>();
-        if (string.IsNullOrEmpty(options.ProxyName) || !char.IsAsciiLetter(options.ProxyName[0]) || !options.ProxyName.All(IsNameChar))
+        if (string.IsNullOrEmpty(options.ProxyName) || !char.IsAsciiLetter(options.ProxyName[0]) || !options.ProxyName.All(IsTokenChar))
         {
-            failures.Add($"{nameof(ForwardProxyOptions.ProxyName)} must start with a letter and contain only letters, digits and '-', '.', '_', '~', ':' or '/'.");
+            failures.Add($"{nameof(ForwardProxyOptions.ProxyName)} must be an HTTP token that starts with a letter: letters, digits and any of !#$%&'*+-.^_`|~.");
         }
 
         if (options.AuthorizationPolicy is not null && options.AuthorizationPolicyName is not null)
@@ -20,10 +20,10 @@ internal sealed class ForwardProxyOptionsValidator : IValidateOptions<ForwardPro
             failures.Add($"Set only one of {nameof(ForwardProxyOptions.AuthorizationPolicy)} and {nameof(ForwardProxyOptions.AuthorizationPolicyName)}.");
         }
 
-        CheckPositive(failures, options.ConnectTimeout, nameof(ForwardProxyOptions.ConnectTimeout));
-        CheckPositive(failures, options.TunnelIdleTimeout, nameof(ForwardProxyOptions.TunnelIdleTimeout));
-        CheckPositive(failures, options.HttpActivityTimeout, nameof(ForwardProxyOptions.HttpActivityTimeout));
-        CheckPositive(failures, options.ConnectRequestHeadersTimeout, nameof(ForwardProxyOptions.ConnectRequestHeadersTimeout));
+        CheckTimeout(failures, options.ConnectTimeout, nameof(ForwardProxyOptions.ConnectTimeout));
+        CheckTimeout(failures, options.TunnelIdleTimeout, nameof(ForwardProxyOptions.TunnelIdleTimeout));
+        CheckTimeout(failures, options.HttpActivityTimeout, nameof(ForwardProxyOptions.HttpActivityTimeout));
+        CheckTimeout(failures, options.ConnectRequestHeadersTimeout, nameof(ForwardProxyOptions.ConnectRequestHeadersTimeout));
 
         if (options.MaxConnectRequestHeadersSize < 64)
         {
@@ -41,13 +41,16 @@ internal sealed class ForwardProxyOptionsValidator : IValidateOptions<ForwardPro
         return failures.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(failures);
     }
 
-    private static bool IsNameChar(char c) => char.IsAsciiLetterOrDigit(c) || c is '-' or '.' or '_' or '~' or ':' or '/';
+    // RFC 9110 tchar. A token starting with a letter is also a valid RFC 8941 sf-token, as Proxy-Status requires.
+    private static bool IsTokenChar(char c) =>
+        char.IsAsciiLetterOrDigit(c) || c is '!' or '#' or '$' or '%' or '&' or '\'' or '*' or '+' or '-' or '.' or '^' or '_' or '`' or '|' or '~';
 
-    private static void CheckPositive(List<string> failures, TimeSpan value, string name)
+    // Timeouts are converted to int milliseconds (activity timers, SocketsHttpHandler.ConnectTimeout).
+    private static void CheckTimeout(List<string> failures, TimeSpan value, string name)
     {
-        if (value <= TimeSpan.Zero || value == Timeout.InfiniteTimeSpan)
+        if (value <= TimeSpan.Zero || value.TotalMilliseconds > int.MaxValue)
         {
-            failures.Add($"{name} must be positive.");
+            failures.Add($"{name} must be positive and at most {int.MaxValue} milliseconds (about 24.8 days).");
         }
     }
 

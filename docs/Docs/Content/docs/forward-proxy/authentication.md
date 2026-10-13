@@ -11,7 +11,8 @@ section: Forward Proxy
 The proxy evaluates one ASP.NET Core authorization policy for every proxy
 request, with the requested `ForwardProxyDestination` as the authorization
 resource. Set it with `ForwardProxyOptions.AuthorizationPolicy` or
-`AuthorizationPolicyName`. With neither set, the proxy allows anonymous clients
+`AuthorizationPolicyName`, but not both; setting both fails options
+validation at startup. With neither set, the proxy allows anonymous clients
 and logs a warning.
 
 A policy that names no authentication schemes uses the default authenticate

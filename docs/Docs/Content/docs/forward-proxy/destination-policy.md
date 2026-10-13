@@ -90,6 +90,9 @@ public sealed class TenantFilter(ITenantStore tenants) : IForwardProxyDestinatio
 builder.Services.AddSingleton<IForwardProxyDestinationFilter, TenantFilter>();
 ```
 
+Filters are resolved from `context.RequestServices` for each request, so they
+may be registered as singleton, scoped or transient services.
+
 For HTTP/1.1 `CONNECT`, `context` is a synthetic `HttpContext` built from the
 `CONNECT` request: headers, connection information, TLS client certificate,
 `User` and `RequestServices` are available. There is no request body and the
@@ -105,6 +108,9 @@ response is controlled by the proxy.
 | `ConnectRequestHeadersTimeout` | 30 s | Time allowed to receive an HTTP/1.1 `CONNECT` head |
 | `MaxConnectRequestHeadersSize` | 16 KiB | Larger HTTP/1.1 `CONNECT` heads get `431` |
 | `MaxConcurrentTunnels` | 10,000 | Further tunnels (`CONNECT` and WebSocket upgrades) get `503`; `null` for no limit |
+
+Timeouts must be positive and at most `int.MaxValue` milliseconds (about 24.8
+days); other values fail options validation at startup.
 
 HTTP/2 tunnels disable Kestrel's minimum data rate and maximum request body
 size for that stream; `TunnelIdleTimeout` governs them instead.

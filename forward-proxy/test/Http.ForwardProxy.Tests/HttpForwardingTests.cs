@@ -134,6 +134,54 @@ public class HttpForwardingTests
     }
 
     [Fact]
+    public async Task DoesNotAdvertiseRequestTrailersItDrops()
+    {
+        await using var origin = await StartOriginAsync(async context =>
+        {
+            using var reader = new StreamReader(context.Request.Body);
+            var requestBody = await reader.ReadToEndAsync(context.RequestAborted);
+            await context.Response.WriteAsync($"trailer=[{context.Request.Headers.Trailer}]\nbody={requestBody}\n", context.RequestAborted);
+        });
+        await using var proxy = await ProxyHost.StartAsync();
+        using var socket = await RawProxy.ConnectAsync(proxy.Port);
+        var port = ProxyHost.GetPort(origin);
+
+        await RawProxy.SendAsync(socket, $"POST http://127.0.0.1:{port}/ HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\nTransfer-Encoding: chunked\r\nTrailer: X-T\r\n\r\n3\r\npay\r\n0\r\nX-T: 1\r\n\r\n");
+        var response = await RawProxy.ReadResponseAsync(socket);
+        var body = await RawProxy.ReadToEndAsync(socket, response.Body);
+
+        response.StatusCode.ShouldBe(200);
+        body.ShouldContain("trailer=[]\n");
+        body.ShouldContain("body=pay\n");
+    }
+
+    [Fact]
+    public async Task DoesNotAdvertiseResponseTrailersItDrops()
+    {
+        await using var origin = await StartOriginAsync(async context =>
+        {
+            context.Response.DeclareTrailer("X-T");
+            await context.Response.WriteAsync("payload", context.RequestAborted);
+            if (context.Response.SupportsTrailers())
+            {
+                context.Response.AppendTrailer("X-T", "1");
+            }
+        });
+        await using var proxy = await ProxyHost.StartAsync();
+        using var socket = await RawProxy.ConnectAsync(proxy.Port);
+        var port = ProxyHost.GetPort(origin);
+
+        await RawProxy.SendAsync(socket, $"GET http://127.0.0.1:{port}/ HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\nTE: trailers\r\n\r\n");
+        var response = await RawProxy.ReadResponseAsync(socket);
+        var body = await RawProxy.ReadToEndAsync(socket, response.Body);
+
+        response.StatusCode.ShouldBe(200);
+        response.Headers.Contains("Trailer").ShouldBeFalse();
+        body.ShouldContain("payload");
+        body.ShouldNotContain("X-T");
+    }
+
+    [Fact]
     public async Task ForwardsWebSocketUpgrades()
     {
         await using var origin = await OriginHost.StartAsync();

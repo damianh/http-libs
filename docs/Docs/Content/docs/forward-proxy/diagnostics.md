@@ -12,7 +12,8 @@ section: Forward Proxy
 
 Proxy-generated errors carry an [RFC 9209](https://www.rfc-editor.org/rfc/rfc9209.html)
 `Proxy-Status` header naming the proxy (`ProxyName`, default `forward-proxy`)
-and the error type, without internal details:
+and the error type, without internal details. `ProxyName` is also the `Via`
+pseudonym, so it must be an HTTP token starting with a letter (no `:` or `/`):
 
 ```http
 HTTP/1.1 403 Forbidden

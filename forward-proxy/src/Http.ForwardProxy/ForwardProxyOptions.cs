@@ -11,18 +11,23 @@ public sealed class ForwardProxyOptions
 {
     /// <summary>
     /// The proxy's name, used as the received-by pseudonym in <c>Via</c> and as the proxy identifier in
-    /// <c>Proxy-Status</c>. Must be an HTTP token. Defaults to <c>forward-proxy</c>.
+    /// <c>Proxy-Status</c>. Must be an HTTP token (RFC 9110 <c>tchar</c> characters) that starts with an ASCII letter, so
+    /// it is also a valid structured-field token; <c>:</c> and <c>/</c> are not allowed. Defaults to <c>forward-proxy</c>.
     /// </summary>
     public string ProxyName { get; set; } = "forward-proxy";
 
     /// <summary>
     /// Name of an ASP.NET Core authorization policy every proxy request must satisfy. The policy is evaluated with the
     /// <see cref="ForwardProxyDestination"/> as its resource. When neither this nor <see cref="AuthorizationPolicy"/>
-    /// is set, the proxy accepts anonymous clients.
+    /// is set, the proxy accepts anonymous clients. Mutually exclusive with <see cref="AuthorizationPolicy"/>; setting both
+    /// fails options validation.
     /// </summary>
     public string? AuthorizationPolicyName { get; set; }
 
-    /// <summary>An authorization policy every proxy request must satisfy. Takes precedence over <see cref="AuthorizationPolicyName"/>.</summary>
+    /// <summary>
+    /// An authorization policy every proxy request must satisfy. Mutually exclusive with
+    /// <see cref="AuthorizationPolicyName"/>; setting both fails options validation.
+    /// </summary>
     public AuthorizationPolicy? AuthorizationPolicy { get; set; }
 
     /// <summary>
@@ -64,19 +69,29 @@ public sealed class ForwardProxyOptions
     /// </summary>
     public bool BlockNonPublicAddresses { get; set; } = true;
 
-    /// <summary>Time allowed to resolve and connect to a destination. Defaults to 10 seconds.</summary>
+    /// <summary>
+    /// Time allowed to resolve and connect to a destination. Defaults to 10 seconds. Must be positive and at most
+    /// <see cref="int.MaxValue"/> milliseconds (about 24.8 days).
+    /// </summary>
     public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(10);
 
     /// <summary>
     /// A tunnel (including an upgraded WebSocket connection) with no traffic in either direction for this long is
-    /// closed. Defaults to 5 minutes.
+    /// closed. Defaults to 5 minutes. Must be positive and at most <see cref="int.MaxValue"/> milliseconds (about 24.8 days).
     /// </summary>
     public TimeSpan TunnelIdleTimeout { get; set; } = TimeSpan.FromMinutes(5);
 
-    /// <summary>Maximum time without progress (sending the request, receiving response headers or body data) when forwarding <c>http://</c> requests. Defaults to 100 seconds.</summary>
+    /// <summary>
+    /// Maximum time without progress (sending the request, receiving response headers or body data) when forwarding
+    /// <c>http://</c> requests. Defaults to 100 seconds. Must be positive and at most <see cref="int.MaxValue"/>
+    /// milliseconds (about 24.8 days).
+    /// </summary>
     public TimeSpan HttpActivityTimeout { get; set; } = TimeSpan.FromSeconds(100);
 
-    /// <summary>Time allowed for a client to send an HTTP/1.1 <c>CONNECT</c> request head. Defaults to 30 seconds.</summary>
+    /// <summary>
+    /// Time allowed for a client to send an HTTP/1.1 <c>CONNECT</c> request head. Defaults to 30 seconds. Must be
+    /// positive and at most <see cref="int.MaxValue"/> milliseconds (about 24.8 days).
+    /// </summary>
     public TimeSpan ConnectRequestHeadersTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
     /// <summary>Maximum size, in bytes, of an HTTP/1.1 <c>CONNECT</c> request head. Defaults to 16 KiB.</summary>

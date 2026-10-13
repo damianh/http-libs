@@ -39,6 +39,9 @@ internal static class ForwardingHeaders
         HeaderNames.UpgradeInsecureRequests,
         HeaderNames.TE,
         HeaderNames.AltSvc,
+
+        // Trailer fields are never forwarded, so the Trailer header must not advertise them (RFC 9110 §6.6.2).
+        HeaderNames.Trailer,
     }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
     // Headers that HttpClient only accepts on HttpContent.

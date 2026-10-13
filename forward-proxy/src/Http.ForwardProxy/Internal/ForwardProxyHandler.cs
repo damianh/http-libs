@@ -7,6 +7,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using DamianH.Http.ForwardProxy.Internal.Forwarding;
 using Microsoft.Extensions.Options;
@@ -22,7 +23,6 @@ internal sealed class ForwardProxyHandler : IDisposable
     private readonly DestinationPolicy _policy;
     private readonly ProxyDialer _dialer;
     private readonly ProxyAuthorizer _authorizer;
-    private readonly IForwardProxyDestinationFilter[] _filters;
     private readonly ForwardProxyMetrics _metrics;
     private readonly TunnelLimiter _limiter;
     private readonly HttpForwarder _forwarder;
@@ -33,7 +33,6 @@ internal sealed class ForwardProxyHandler : IDisposable
         DestinationPolicy policy,
         ProxyDialer dialer,
         ProxyAuthorizer authorizer,
-        IEnumerable<IForwardProxyDestinationFilter> filters,
         ForwardProxyMetrics metrics,
         ILogger<ForwardProxyHandler> logger)
     {
@@ -41,7 +40,6 @@ internal sealed class ForwardProxyHandler : IDisposable
         _policy = policy;
         _dialer = dialer;
         _authorizer = authorizer;
-        _filters = [.. filters];
         _metrics = metrics;
         _limiter = new TunnelLimiter(_options.MaxConcurrentTunnels);
         _logger = logger;
@@ -134,10 +132,10 @@ internal sealed class ForwardProxyHandler : IDisposable
         }
 
         ForwardingFailure? failure;
+        var tunnelStarted = false;
         try
         {
-            _metrics.Request(ForwardProxyRequestKind.Http, Outcomes.Allowed);
-            failure = await _forwarder.SendAsync(context, target, isUpgrade ? () => new TunnelTelemetry(_metrics, _logger, destination) : null).ConfigureAwait(false);
+            failure = await _forwarder.SendAsync(context, target, isUpgrade ? StartTunnel : null).ConfigureAwait(false);
         }
         finally
         {
@@ -145,6 +143,12 @@ internal sealed class ForwardProxyHandler : IDisposable
             {
                 _limiter.Release();
             }
+        }
+
+        // Like CONNECT, an upgraded connection is counted when its tunnel opens; later relay failures are not errors.
+        if (!tunnelStarted)
+        {
+            _metrics.Request(ForwardProxyRequestKind.Http, failure is null ? Outcomes.Allowed : Outcomes.Error);
         }
 
         if (failure is null)
@@ -156,6 +160,13 @@ internal sealed class ForwardProxyHandler : IDisposable
         if (!context.Response.HasStarted)
         {
             SetError(context, FindProxyError(failure.Exception) ?? failure.Error);
+        }
+
+        TunnelTelemetry StartTunnel()
+        {
+            tunnelStarted = true;
+            _metrics.Request(ForwardProxyRequestKind.Http, Outcomes.Allowed);
+            return new TunnelTelemetry(_metrics, _logger, destination);
         }
     }
 
@@ -184,7 +195,8 @@ internal sealed class ForwardProxyHandler : IDisposable
             return false;
         }
 
-        foreach (var filter in _filters)
+        // Resolved per request so filters can be singleton, scoped or transient.
+        foreach (var filter in context.RequestServices.GetServices<IForwardProxyDestinationFilter>())
         {
             if (!await filter.IsAllowedAsync(context, destination, context.RequestAborted).ConfigureAwait(false))
             {
