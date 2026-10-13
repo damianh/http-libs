@@ -156,7 +156,7 @@ public class ConnectTunnelTests
         await RawProxy.SendAsync(socket, "GET /health HTTP/1.1\r\nHost: localhost\r\n\r\n");
         var first = await RawProxy.ReadResponseAsync(socket);
         first.StatusCode.ShouldBe(200);
-        await RawProxy.ReadExactlyAsync(socket, "proxy-health".Length, first.Body);
+        (await RawProxy.ReadBodyAsync(socket, first)).ShouldBe("proxy-health");
 
         await RawProxy.SendAsync(socket, "CONNECT example.com:443 HTTP/1.1\r\nHost: example.com:443\r\n\r\n");
         var second = await RawProxy.ReadResponseAsync(socket);

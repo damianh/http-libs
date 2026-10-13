@@ -1,6 +1,7 @@
 // Copyright (c) Damian Hickey. All rights reserved.
 // See LICENSE in the project root for license information.
 
+using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Net.WebSockets;
@@ -308,6 +309,40 @@ internal static class RawProxy
         }
 
         return builder.ToString();
+    }
+
+    /// <summary>
+    /// Reads the rest of <paramref name="response"/>'s body as framed by Content-Length or chunked
+    /// transfer coding (without trailers), leaving the connection positioned at the next response.
+    /// </summary>
+    public static async Task<string> ReadBodyAsync(Socket socket, RawResponse response)
+    {
+        if (response.Header("Transfer-Encoding").Contains("chunked", StringComparison.OrdinalIgnoreCase))
+        {
+            var raw = response.Body;
+            while (!raw.EndsWith("0\r\n\r\n", StringComparison.Ordinal))
+            {
+                raw = await ReadExactlyAsync(socket, raw.Length + 1, raw);
+            }
+
+            var body = new StringBuilder();
+            var position = 0;
+            while (true)
+            {
+                var lineEnd = raw.IndexOf("\r\n", position, StringComparison.Ordinal);
+                var size = Convert.ToInt32(raw[position..lineEnd].Split(';')[0], 16);
+                if (size == 0)
+                {
+                    return body.ToString();
+                }
+
+                body.Append(raw, lineEnd + 2, size);
+                position = lineEnd + 2 + size + 2;
+            }
+        }
+
+        var length = int.Parse(response.Header("Content-Length"), CultureInfo.InvariantCulture);
+        return await ReadExactlyAsync(socket, length, response.Body);
     }
 
     /// <summary>Reads exactly <paramref name="count"/> bytes.</summary>
