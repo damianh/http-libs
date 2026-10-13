@@ -96,6 +96,9 @@ public class ConnectRequestParserTests
     [InlineData("CONNECT example.com:443 HTTP/1.1\r\nX: a\nY: b\r\n\r\n")]
     [InlineData("CONNECT example.com:443 HTTP/1.1\nHost: x\r\n\r\n")]
     [InlineData("CONNECT example.com:443 HTTP/1.1\r\nContent-Length: 5\r\n\r\n")]
+    [InlineData("CONNECT example.com:443 HTTP/1.1\r\nContent-Length: 01\r\n\r\n")]
+    [InlineData("CONNECT example.com:443 HTTP/1.1\r\nContent-Length: +0\r\n\r\n")]
+    [InlineData("CONNECT example.com:443 HTTP/1.1\r\nContent-Length: 0, 0\r\n\r\n")]
     [InlineData("CONNECT example.com:443 HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n")]
     public void RejectsMalformedRequests(string head)
     {
@@ -103,9 +106,11 @@ public class ConnectRequestParserTests
         status.ShouldBe(400);
     }
 
-    [Fact]
-    public void AllowsZeroContentLength() =>
-        TryParse(Sequence("CONNECT example.com:443 HTTP/1.1\r\nContent-Length: 0\r\n\r\n"), 1024, out _, out _, out _).ShouldBe(ParseStatus.Complete);
+    [Theory]
+    [InlineData("0")]
+    [InlineData("00")]
+    public void AllowsZeroContentLength(string contentLength) =>
+        TryParse(Sequence($"CONNECT example.com:443 HTTP/1.1\r\nContent-Length: {contentLength}\r\n\r\n"), 1024, out _, out _, out _).ShouldBe(ParseStatus.Complete);
 
     private static ReadOnlySequence<byte> Sequence(string value) => new(Encoding.Latin1.GetBytes(value));
 

@@ -118,7 +118,7 @@ internal static class ConnectRequestParser
             }
 
             if (string.Equals(name, "Transfer-Encoding", StringComparison.OrdinalIgnoreCase)
-                || (string.Equals(name, "Content-Length", StringComparison.OrdinalIgnoreCase) && value != "0"))
+                || (string.Equals(name, "Content-Length", StringComparison.OrdinalIgnoreCase) && !IsZero(value)))
             {
                 return ParseStatus.Invalid;
             }
@@ -228,4 +228,7 @@ internal static class ConnectRequestParser
         b is (>= (byte)'a' and <= (byte)'z') or (>= (byte)'A' and <= (byte)'Z') or (>= (byte)'0' and <= (byte)'9')
             or (byte)'!' or (byte)'#' or (byte)'$' or (byte)'%' or (byte)'&' or (byte)'\'' or (byte)'*' or (byte)'+'
             or (byte)'-' or (byte)'.' or (byte)'^' or (byte)'_' or (byte)'`' or (byte)'|' or (byte)'~';
+
+    // Content-Length = 1*DIGIT (RFC 9110 section 8.6), so any run of zeros is a zero length.
+    private static bool IsZero(string value) => value.Length > 0 && value.AsSpan().TrimStart('0').IsEmpty;
 }
