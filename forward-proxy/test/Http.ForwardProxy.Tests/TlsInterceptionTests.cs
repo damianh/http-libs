@@ -148,6 +148,54 @@ public class TlsInterceptionTests
         response.Headers.GetValues("Proxy-Status").ShouldBe(["forward-proxy; error=proxy_internal_error"]);
     }
 
+    [Theory]
+    [InlineData(false, "host")]
+    [InlineData(true, "host")]
+    [InlineData(false, "port")]
+    [InlineData(true, "port")]
+    [InlineData(false, "scheme")]
+    [InlineData(true, "scheme")]
+    [InlineData(false, "path")]
+    [InlineData(true, "path")]
+    [InlineData(false, "null")]
+    [InlineData(true, "null")]
+    [InlineData(false, "relative")]
+    [InlineData(true, "relative")]
+    public async Task RejectsUriChangingTransformsBeforeSending(bool intercepted, string change)
+    {
+        var requests = 0;
+        Task RecordRequest(HttpContext context)
+        {
+            Interlocked.Increment(ref requests);
+            return context.Response.WriteAsync("unexpected", context.RequestAborted);
+        }
+
+        await using var origin = await OriginHost.StartAsync(tls: intercepted, handler: RecordRequest);
+        await using var alternate = await OriginHost.StartAsync(tls: intercepted, handler: RecordRequest);
+        var changedUri = change switch
+        {
+            "host" => new UriBuilder(origin.Uri) { Host = "localhost" }.Uri,
+            "port" => alternate.Uri,
+            "scheme" => new UriBuilder(origin.Uri) { Scheme = intercepted ? "http" : "https" }.Uri,
+            "path" => new Uri(origin.Uri, "/other"),
+            "null" => null,
+            "relative" => new Uri("/other", UriKind.Relative),
+            _ => throw new ArgumentOutOfRangeException(nameof(change)),
+        };
+        void ConfigureServices(IServiceCollection services) =>
+            services.AddSingleton<IForwardProxyRequestTransform>(new UriChangingTransform(changedUri));
+        await using var proxy = intercepted
+            ? await StartInterceptingProxyAsync(configureServices: ConfigureServices)
+            : await ProxyHost.StartAsync(configureServices: ConfigureServices);
+        using var client = intercepted ? CreateClient(proxy) : ConnectTunnelTests.CreateClient(proxy);
+
+        using var response = await client.GetAsync(origin.Uri, Ct);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.InternalServerError);
+        response.Headers.GetValues("Proxy-Status").ShouldBe(["forward-proxy; error=proxy_internal_error"]);
+        requests.ShouldBe(0);
+    }
+
     [Fact]
     public async Task StreamsServerSentEvents()
     {
@@ -505,6 +553,15 @@ public class TlsInterceptionTests
         public ValueTask TransformResponseAsync(HttpContext context, ForwardProxyDestination destination, HttpResponseMessage response, CancellationToken cancellationToken)
         {
             response.Headers.Add("X-Transformed", destination.Kind.ToString());
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class UriChangingTransform(Uri? uri) : IForwardProxyRequestTransform
+    {
+        public ValueTask TransformRequestAsync(HttpContext context, ForwardProxyDestination destination, HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            request.RequestUri = uri;
             return ValueTask.CompletedTask;
         }
     }

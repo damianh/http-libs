@@ -171,7 +171,7 @@ protocol such as EST. The proxy then needs only enrollment credentials and the
 CA's public trust certificate; compromise of the proxy does not directly expose
 the CA signing key.
 
-The [EST interception sample](../../../../../forward-proxy/samples/EstInterception/)
+The [EST interception sample](https://github.com/damianh/http-libs/tree/main/forward-proxy/samples/EstInterception)
 uses [OpenCertServer](https://github.com/jjrdk/opencertserver) as the CA service.
 Its proxy posts a PKCS#10 request with the destination's SAN to EST, caches the
 issued leaf certificate, and never receives the CA private key. The CA host
@@ -222,7 +222,8 @@ sealed class ApiKeyTransform(ISecretStore secrets) : IForwardProxyRequestTransfo
 ```
 
 An exception from a transform fails the request with `500`
-`proxy_internal_error`.
+`proxy_internal_error`. Changing the outgoing request URI is rejected with the
+same error; transforms cannot reroute requests after destination policy checks.
 
 ## Behaviour
 

@@ -13,9 +13,7 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
-var interceptedHosts = (builder.Configuration.GetSection("Interception:Hosts").Get<string[]>() ?? ["httpbin.org"])
-    .Select(static host => host.ToLowerInvariant())
-    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+var interceptedHosts = builder.Configuration.GetInterceptionHosts("Interception:Hosts");
 var port = builder.Configuration.GetValue("Proxy:Port", 8080);
 
 builder.WebHost.ConfigureKestrel(kestrel => kestrel.ListenAnyIP(port, listen =>

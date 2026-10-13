@@ -47,7 +47,7 @@ clients. Use a CA dedicated to the proxy, keep its key in a secret store or
 HSM, and select only the destinations you need to decrypt. For stronger key
 isolation, keep the CA in a separate certificate service and issue destination
 certificates to the proxy over an enrollment protocol such as EST. The
-[interception sample](../../../../../forward-proxy/samples/EstInterception/)
+[interception sample](https://github.com/damianh/http-libs/tree/main/forward-proxy/samples/EstInterception)
 demonstrates this pattern; it is an example, not a production CA deployment.
 
 ## Limit resources

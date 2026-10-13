@@ -61,6 +61,11 @@ internal sealed class HttpForwarder(HttpMessageInvoker httpClient, ForwardProxyO
             foreach (var transform in transforms)
             {
                 await transform.TransformRequestAsync(context, destination, request, context.RequestAborted).ConfigureAwait(false);
+                if (request.RequestUri is not { IsAbsoluteUri: true } transformedUri
+                    || !string.Equals(transformedUri.AbsoluteUri, target.AbsoluteUri, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException("Request transforms must not change the destination URI.");
+                }
             }
 
             HttpResponseMessage response;

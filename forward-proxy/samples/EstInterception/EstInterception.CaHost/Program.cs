@@ -17,9 +17,7 @@ using OpenCertServer.Est.Server.Response;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
-var allowedHosts = (builder.Configuration.GetSection("Interception:AllowedHosts").Get<string[]>() ?? ["httpbin.org"])
-    .Select(static host => host.ToLowerInvariant())
-    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+var allowedHosts = builder.Configuration.GetInterceptionHosts("Interception:AllowedHosts");
 var caCertificatePath = builder.Configuration["Interception:CaCertificatePath"]
     ?? Path.Combine(Path.GetTempPath(), "http-libs-est-interception-ca.pem");
 
