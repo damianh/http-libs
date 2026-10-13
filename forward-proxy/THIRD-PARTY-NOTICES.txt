@@ -7,7 +7,7 @@ https://github.com/dotnet/yarp (v2.3.0)
 Adapted files (src/Http.ForwardProxy/Internal/Forwarding/):
   ActivityCancellationTokenSource.cs, EmptyHttpContent.cs, ForwardingHeaders.cs,
   HttpForwarder.cs, ReverseProxyPropagator.cs, StreamCopier.cs,
-  StreamCopyHttpContent.cs
+  StreamCopyHttpContent.cs, StreamCopyResult.cs
 ================================================================================
 
 The MIT License (MIT)
