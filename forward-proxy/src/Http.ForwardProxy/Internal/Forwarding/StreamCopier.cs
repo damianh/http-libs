@@ -8,14 +8,6 @@ using System.Buffers;
 
 namespace DamianH.Http.ForwardProxy.Internal.Forwarding;
 
-internal enum StreamCopyResult
-{
-    Success,
-    InputError,
-    OutputError,
-    Canceled,
-}
-
 /// <summary>Copies streams, capturing errors and resetting the activity timeout on progress.</summary>
 internal static class StreamCopier
 {

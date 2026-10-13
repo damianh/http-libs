@@ -17,9 +17,6 @@ using Microsoft.Net.Http.Headers;
 
 namespace DamianH.Http.ForwardProxy.Internal.Forwarding;
 
-/// <summary>Why forwarding failed. <see cref="Error"/> is written to the response if it has not started.</summary>
-internal sealed record ForwardingFailure(string Stage, ProxyError Error, Exception Exception);
-
 /// <summary>Forwards an absolute-form request to its <c>http://</c> destination.</summary>
 internal sealed class HttpForwarder(HttpMessageInvoker httpClient, ForwardProxyOptions options) : IDisposable
 {

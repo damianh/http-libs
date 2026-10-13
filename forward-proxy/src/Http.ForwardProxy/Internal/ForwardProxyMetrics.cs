@@ -3,7 +3,6 @@
 
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
-using Microsoft.Extensions.Logging;
 
 namespace DamianH.Http.ForwardProxy.Internal;
 
@@ -38,79 +37,5 @@ internal sealed class ForwardProxyMetrics
         _tunnelDuration.Record(seconds);
         _tunnelBytes.Add(bytesUpstream, new KeyValuePair<string, object?>("forward_proxy.direction", "upstream"));
         _tunnelBytes.Add(bytesDownstream, new KeyValuePair<string, object?>("forward_proxy.direction", "downstream"));
-    }
-}
-
-internal static class Outcomes
-{
-    public const string Allowed = "allowed";
-    public const string Unauthorized = "unauthorized";
-    public const string Denied = "denied";
-    public const string Error = "error";
-}
-
-/// <summary>Bounds concurrent tunnels: CONNECT tunnels and upgraded (WebSocket) connections share one limit.</summary>
-internal sealed class TunnelLimiter(int? limit)
-{
-    private int _count;
-
-    public bool TryAcquire()
-    {
-        if (limit is not { } max)
-        {
-            Interlocked.Increment(ref _count);
-            return true;
-        }
-
-        while (true)
-        {
-            var current = Volatile.Read(ref _count);
-            if (current >= max)
-            {
-                return false;
-            }
-
-            if (Interlocked.CompareExchange(ref _count, current + 1, current) == current)
-            {
-                return true;
-            }
-        }
-    }
-
-    public void Release() => Interlocked.Decrement(ref _count);
-}
-
-/// <summary>Tracing, metrics and logging for one open tunnel (CONNECT or upgraded connection).</summary>
-internal sealed class TunnelTelemetry
-{
-    private readonly ForwardProxyMetrics _metrics;
-    private readonly ILogger _logger;
-    private readonly ForwardProxyDestination _destination;
-    private readonly Activity? _activity;
-    private readonly long _started;
-
-    public TunnelTelemetry(ForwardProxyMetrics metrics, ILogger logger, ForwardProxyDestination destination)
-    {
-        _metrics = metrics;
-        _logger = logger;
-        _destination = destination;
-        _activity = ForwardProxyMetrics.ActivitySource.StartActivity("ForwardProxy.Tunnel", ActivityKind.Internal);
-        _activity?.SetTag("server.address", destination.Host);
-        _activity?.SetTag("server.port", destination.Port);
-        metrics.TunnelOpened();
-        _started = Stopwatch.GetTimestamp();
-    }
-
-    public void Complete(long bytesUpstream, long bytesDownstream, bool idleTimedOut)
-    {
-        var elapsed = Stopwatch.GetElapsedTime(_started);
-        _metrics.TunnelClosed(elapsed.TotalSeconds, bytesUpstream, bytesDownstream);
-        if (idleTimedOut)
-        {
-            Log.TunnelIdleTimeout(_logger, _destination.Host, _destination.Port);
-        }
-
-        Log.TunnelClosed(_logger, _destination.Host, _destination.Port, elapsed.TotalMilliseconds, bytesUpstream, bytesDownstream);
-        _activity?.Dispose();
     }
 }

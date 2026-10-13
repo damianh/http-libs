@@ -3,16 +3,6 @@
 
 namespace DamianH.Http.ForwardProxy;
 
-/// <summary>The kind of proxy request.</summary>
-public enum ForwardProxyRequestKind
-{
-    /// <summary>A <c>CONNECT</c> tunnel (HTTP/1.1 or HTTP/2).</summary>
-    Connect,
-
-    /// <summary>An absolute-form <c>http://</c> request forwarded by the proxy.</summary>
-    Http,
-}
-
 /// <summary>
 /// The destination a client asked the proxy to reach. Also the resource passed to the proxy authorization policy.
 /// </summary>
