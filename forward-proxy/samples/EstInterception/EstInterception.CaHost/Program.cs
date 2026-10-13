@@ -67,6 +67,17 @@ if (serverResult is not SignCertificateResponse.Success serverSuccess)
 
 serverCertificate = serverSuccess.Certificate.CopyWithPrivateKey(serverKey);
 
+// The plaintext listener exists only for health probes; EST credentials must never cross it.
+app.Use((context, next) =>
+{
+    if (!context.Request.IsHttps && !context.Request.Path.Equals("/healthz", StringComparison.OrdinalIgnoreCase))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return Task.CompletedTask;
+    }
+
+    return next(context);
+});
 app.UseRouting().UseAuthentication().UseAuthorization();
 app.MapEstServer(enrollPolicy: enrollPolicy);
 app.MapGet("/healthz", () => Results.Ok("ok"));
