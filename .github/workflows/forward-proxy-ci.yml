@@ -1,0 +1,34 @@
+name: forward-proxy/ci
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - '**'
+    paths:
+      - .github/BuildHelpers/**
+      - .github/workflows/forward-proxy-ci.yml
+      - .github/workflows/ci-template.yml
+      - forward-proxy/**
+      - .editorconfig
+      - Directory.Build.props
+      - global.json
+      - http-lib.slnx
+  pull_request:
+    paths:
+      - .github/BuildHelpers/**
+      - .github/workflows/forward-proxy-ci.yml
+      - .github/workflows/ci-template.yml
+      - forward-proxy/**
+      - .editorconfig
+      - Directory.Build.props
+      - global.json
+      - http-lib.slnx
+
+jobs:
+  build:
+    uses: ./.github/workflows/ci-template.yml
+    with:
+      product: forward-proxy
+      test-targets: '["test"]'

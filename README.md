@@ -20,6 +20,7 @@ A collection of .NET libraries for HTTP caching, structured field values, messag
 | [DamianH.Http.StructuredFieldValues](https://damianh.github.io/http-libs/docs/structured-field-values/overview/) | RFC 8941/9651 parser, serializer, and POCO mapper for HTTP Structured Field Values | [![NuGet](https://img.shields.io/nuget/v/DamianH.Http.StructuredFieldValues.svg)](https://www.nuget.org/packages/DamianH.Http.StructuredFieldValues/) | [![Downloads](https://img.shields.io/nuget/dt/DamianH.Http.StructuredFieldValues.svg)](https://www.nuget.org/packages/DamianH.Http.StructuredFieldValues/) |
 | [DamianH.Http.HttpSignatures](https://damianh.github.io/http-libs/docs/signatures/overview/) | RFC 9421 HTTP Message Signatures for signing and verifying HTTP messages | [![NuGet](https://img.shields.io/nuget/v/DamianH.Http.HttpSignatures.svg)](https://www.nuget.org/packages/DamianH.Http.HttpSignatures/) | [![Downloads](https://img.shields.io/nuget/dt/DamianH.Http.HttpSignatures.svg)](https://www.nuget.org/packages/DamianH.Http.HttpSignatures/) |
 | [DamianH.Http.ForwardedHeaders](https://damianh.github.io/http-libs/docs/forwarded-headers/overview/) | RFC 7239 `Forwarded` parser and trusted-proxy middleware for ASP.NET Core | [![NuGet](https://img.shields.io/nuget/v/DamianH.Http.ForwardedHeaders.svg)](https://www.nuget.org/packages/DamianH.Http.ForwardedHeaders/) | [![Downloads](https://img.shields.io/nuget/dt/DamianH.Http.ForwardedHeaders.svg)](https://www.nuget.org/packages/DamianH.Http.ForwardedHeaders/) |
+| [DamianH.Http.ForwardProxy](https://damianh.github.io/http-libs/docs/forward-proxy/overview/) | HTTP forward (egress) proxy for Kestrel with CONNECT tunnels, proxy authentication and SSRF protection | [![NuGet](https://img.shields.io/nuget/v/DamianH.Http.ForwardProxy.svg)](https://www.nuget.org/packages/DamianH.Http.ForwardProxy/) | [![Downloads](https://img.shields.io/nuget/dt/DamianH.Http.ForwardProxy.svg)](https://www.nuget.org/packages/DamianH.Http.ForwardProxy/) |
 
 ## Repository Structure
 
@@ -33,6 +34,7 @@ file-distributed-cache/       # File-based IDistributedCache implementation
 structured-field-values/      # RFC 8941/9651 structured field values
 signatures/                   # RFC 9421 HTTP message signatures
 forwarded-headers/            # RFC 7239 Forwarded parser and ASP.NET Core middleware
+forward-proxy/                # HTTP forward (egress) proxy for Kestrel
 docs/Docs/Content/docs/        # Detailed documentation, grouped by library
 ```
 
@@ -41,7 +43,7 @@ docs/Docs/Content/docs/        # Detailed documentation, grouped by library
 Requires the **.NET 10 SDK**. Run from the repository root; each library has its own build script and solution filter:
 
 ```bash
-dotnet run signatures/build.cs -- build   # or: forwarded-headers, structured-field-values, hybrid-cache-handler, file-distributed-cache
+dotnet run signatures/build.cs -- build   # or: forwarded-headers, forward-proxy, structured-field-values, hybrid-cache-handler, file-distributed-cache
 dotnet run signatures/build.cs -- test    # per library
 dotnet build http-lib.slnx                # whole solution
 dotnet test --solution http-lib.slnx      # all tests

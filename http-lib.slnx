@@ -10,6 +10,17 @@
   <Folder Name="/forwarded-headers/samples/">
     <Project Path="forwarded-headers/samples/AspNetCoreSample/AspNetCoreSample.csproj" />
   </Folder>
+  <Folder Name="/forward-proxy/">
+  </Folder>
+  <Folder Name="/forward-proxy/src/">
+    <Project Path="forward-proxy/src/Http.ForwardProxy/Http.ForwardProxy.csproj" />
+  </Folder>
+  <Folder Name="/forward-proxy/test/">
+    <Project Path="forward-proxy/test/Http.ForwardProxy.Tests/Http.ForwardProxy.Tests.csproj" />
+  </Folder>
+  <Folder Name="/forward-proxy/samples/">
+    <Project Path="forward-proxy/samples/ForwardProxySample/ForwardProxySample.csproj" />
+  </Folder>
   <Folder Name="/structured-field-values/">
   </Folder>
   <Folder Name="/structured-field-values/src/">
