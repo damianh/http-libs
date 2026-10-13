@@ -53,7 +53,7 @@ internal sealed class StreamCopyHttpContent(HttpContext context, ActivityCancell
                 return;
             }
 
-            var (result, error) = await StreamCopier.CopyAsync(context.Request.Body, stream, Headers.ContentLength ?? StreamCopier.UnknownLength, activityToken, autoFlush: false, cancellationToken).ConfigureAwait(false);
+            var (result, error, _) = await StreamCopier.CopyAsync(context.Request.Body, stream, Headers.ContentLength ?? StreamCopier.UnknownLength, activityToken, autoFlush: false, cancellationToken).ConfigureAwait(false);
             _tcs.TrySetResult((result, error));
 
             // Fail the outgoing request so HttpClient doesn't send a truncated body as complete.

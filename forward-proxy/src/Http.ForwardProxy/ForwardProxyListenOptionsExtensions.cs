@@ -14,10 +14,16 @@ public static class ForwardProxyListenOptionsExtensions
     /// tunnel. Other connections are passed to Kestrel unchanged. When the endpoint uses TLS, call this after
     /// <c>UseHttps()</c>.
     /// </summary>
+    /// <remarks>
+    /// Also enables <see cref="KestrelServerOptions.AllowHostHeaderOverride"/> so that an absolute-form request whose
+    /// <c>Host</c> header differs from its target is accepted, with the target taking precedence (RFC 9112 §3.2.2).
+    /// This is a server-wide Kestrel option.
+    /// </remarks>
     public static ListenOptions UseForwardProxy(this ListenOptions listenOptions)
     {
         ArgumentNullException.ThrowIfNull(listenOptions);
-        listenOptions.Use(next => new ForwardProxyConnectionMiddleware(next, listenOptions.ApplicationServices).OnConnectionAsync);
+        listenOptions.KestrelServerOptions.AllowHostHeaderOverride = true;
+        listenOptions.Use(next => new ForwardProxyConnectionMiddleware(next, listenOptions.ApplicationServices, listenOptions.KestrelServerOptions).OnConnectionAsync);
         return listenOptions;
     }
 }

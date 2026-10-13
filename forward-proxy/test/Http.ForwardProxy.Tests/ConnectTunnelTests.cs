@@ -3,7 +3,9 @@
 
 using System.Net;
 using System.Net.Http;
+using System.IO.Pipelines;
 using System.Net.Sockets;
+using DamianH.Http.ForwardProxy.Internal;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
@@ -212,6 +214,31 @@ public class ConnectTunnelTests
         response.Header("Proxy-Status").ShouldBe("forward-proxy; error=http_request_denied");
     }
 
+    [Fact]
+    public async Task IdleTunnelDoesNotReserveAResponseBufferBeforeDataArrives()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        using var upstream = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+        await upstream.ConnectAsync(listener.LocalEndpoint, TestContext.Current.CancellationToken);
+        using var origin = await listener.AcceptSocketAsync(TestContext.Current.CancellationToken);
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        var input = new Pipe();
+        var output = new Pipe();
+        var writer = new TrackingPipeWriter(output.Writer);
+
+        var pump = TunnelPump.RunAsync(input.Reader, writer, upstream, TimeSpan.FromMinutes(1), cancellation.Token);
+        var reservedBeforeData = writer.ReservedBytes;
+        await cancellation.CancelAsync();
+        await pump;
+        await input.Writer.CompleteAsync();
+        await input.Reader.CompleteAsync();
+        await output.Writer.CompleteAsync();
+        await output.Reader.CompleteAsync();
+
+        reservedBeforeData.ShouldBe(0);
+    }
+
     internal static HttpClient CreateClient(ProxyHost proxy, ICredentials? credentials = null, Uri? proxyUri = null) =>
         new(new SocketsHttpHandler
         {
@@ -223,5 +250,32 @@ public class ConnectTunnelTests
     {
         public ValueTask<bool> IsAllowedAsync(HttpContext context, ForwardProxyDestination destination, CancellationToken cancellationToken) =>
             ValueTask.FromResult(allow(context, destination));
+    }
+
+    private sealed class TrackingPipeWriter(PipeWriter inner) : PipeWriter
+    {
+        public int ReservedBytes { get; private set; }
+
+        public override void Advance(int bytes) => inner.Advance(bytes);
+
+        public override void CancelPendingFlush() => inner.CancelPendingFlush();
+
+        public override void Complete(Exception? exception = null) => inner.Complete(exception);
+
+        public override ValueTask<FlushResult> FlushAsync(CancellationToken cancellationToken = default) => inner.FlushAsync(cancellationToken);
+
+        public override Memory<byte> GetMemory(int sizeHint = 0)
+        {
+            var memory = inner.GetMemory(sizeHint);
+            ReservedBytes = memory.Length;
+            return memory;
+        }
+
+        public override Span<byte> GetSpan(int sizeHint = 0)
+        {
+            var span = inner.GetSpan(sizeHint);
+            ReservedBytes = span.Length;
+            return span;
+        }
     }
 }

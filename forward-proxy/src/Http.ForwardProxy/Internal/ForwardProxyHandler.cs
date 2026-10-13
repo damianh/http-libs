@@ -14,8 +14,10 @@ using Microsoft.Extensions.Options;
 namespace DamianH.Http.ForwardProxy.Internal;
 
 /// <summary>Protocol-independent proxy request handling.</summary>
-internal sealed class ForwardProxyHandler
+internal sealed class ForwardProxyHandler : IDisposable
 {
+    private static readonly ProxyError TunnelLimitReached = new(StatusCodes.Status503ServiceUnavailable, ProxyErrorTypes.ConnectionLimitReached, "Too many concurrent tunnels.");
+
     private readonly ForwardProxyOptions _options;
     private readonly DestinationPolicy _policy;
     private readonly ProxyDialer _dialer;
@@ -52,6 +54,9 @@ internal sealed class ForwardProxyHandler
 
     public ForwardProxyOptions Options => _options;
 
+    /// <summary>Closes pooled origin connections held by the outbound HTTP client.</summary>
+    public void Dispose() => _forwarder.Dispose();
+
     /// <summary>
     /// Authorizes and opens a tunnel to an authority-form <paramref name="target"/>. On failure the error is written
     /// to <paramref name="context"/>'s response (status and headers, not yet sent) and <see langword="null"/> is returned.
@@ -73,7 +78,7 @@ internal sealed class ForwardProxyHandler
 
         if (!_limiter.TryAcquire())
         {
-            Reject(context, destination, new(StatusCodes.Status503ServiceUnavailable, ProxyErrorTypes.ConnectionLimitReached, "Too many concurrent tunnels."), Outcomes.Error);
+            Reject(context, destination, TunnelLimitReached, Outcomes.Error);
             return null;
         }
 
@@ -120,8 +125,28 @@ internal sealed class ForwardProxyHandler
             return;
         }
 
-        _metrics.Request(ForwardProxyRequestKind.Http, Outcomes.Allowed);
-        var failure = await _forwarder.SendAsync(context, target).ConfigureAwait(false);
+        // An upgraded connection is a tunnel, so it counts against the same concurrency limit as CONNECT.
+        var isUpgrade = HttpForwarder.IsWebSocketUpgrade(context);
+        if (isUpgrade && !_limiter.TryAcquire())
+        {
+            Reject(context, destination, TunnelLimitReached, Outcomes.Error);
+            return;
+        }
+
+        ForwardingFailure? failure;
+        try
+        {
+            _metrics.Request(ForwardProxyRequestKind.Http, Outcomes.Allowed);
+            failure = await _forwarder.SendAsync(context, target, isUpgrade ? () => new TunnelTelemetry(_metrics, _logger, destination) : null).ConfigureAwait(false);
+        }
+        finally
+        {
+            if (isUpgrade)
+            {
+                _limiter.Release();
+            }
+        }
+
         if (failure is null)
         {
             return;
@@ -227,11 +252,7 @@ internal sealed class ForwardProxyHandler
 
         public async Task RunAsync(PipeReader clientInput, PipeWriter clientOutput, CancellationToken cancellationToken)
         {
-            using var activity = ForwardProxyMetrics.ActivitySource.StartActivity("ForwardProxy.Tunnel", ActivityKind.Internal);
-            activity?.SetTag("server.address", destination.Host);
-            activity?.SetTag("server.port", destination.Port);
-            owner._metrics.TunnelOpened();
-            var started = Stopwatch.GetTimestamp();
+            var telemetry = new TunnelTelemetry(owner._metrics, owner._logger, destination);
             var result = default(TunnelPump.Result);
             try
             {
@@ -239,14 +260,7 @@ internal sealed class ForwardProxyHandler
             }
             finally
             {
-                var elapsed = Stopwatch.GetElapsedTime(started);
-                owner._metrics.TunnelClosed(elapsed.TotalSeconds, result.BytesUpstream, result.BytesDownstream);
-                if (result.IdleTimedOut)
-                {
-                    Log.TunnelIdleTimeout(owner._logger, destination.Host, destination.Port);
-                }
-
-                Log.TunnelClosed(owner._logger, destination.Host, destination.Port, elapsed.TotalMilliseconds, result.BytesUpstream, result.BytesDownstream);
+                telemetry.Complete(result.BytesUpstream, result.BytesDownstream, result.IdleTimedOut);
                 Dispose();
             }
         }

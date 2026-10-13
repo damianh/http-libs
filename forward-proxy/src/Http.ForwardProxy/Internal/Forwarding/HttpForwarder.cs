@@ -21,7 +21,7 @@ namespace DamianH.Http.ForwardProxy.Internal.Forwarding;
 internal sealed record ForwardingFailure(string Stage, ProxyError Error, Exception Exception);
 
 /// <summary>Forwards an absolute-form request to its <c>http://</c> destination.</summary>
-internal sealed class HttpForwarder(HttpMessageInvoker httpClient, ForwardProxyOptions options)
+internal sealed class HttpForwarder(HttpMessageInvoker httpClient, ForwardProxyOptions options) : IDisposable
 {
     private const string WebSocket = "websocket";
 
@@ -30,12 +30,21 @@ internal sealed class HttpForwarder(HttpMessageInvoker httpClient, ForwardProxyO
     private static readonly ProxyError ResponseIncomplete = new(StatusCodes.Status502BadGateway, ProxyErrorTypes.HttpResponseIncomplete, "Destination response was incomplete.");
     private static readonly ProxyError ClientAborted = new(StatusCodes.Status400BadRequest, ProxyErrorTypes.HttpRequestError, "Client aborted the request.");
 
-    public async Task<ForwardingFailure?> SendAsync(HttpContext context, Uri target)
+    public void Dispose() => httpClient.Dispose();
+
+    /// <summary>Forwards the request.</summary>
+    /// <param name="context">The client request.</param>
+    /// <param name="target">The absolute destination URI.</param>
+    /// <param name="startTunnel">
+    /// For a WebSocket upgrade (<see cref="IsWebSocketUpgrade"/>), starts tunnel telemetry once the destination accepts
+    /// the upgrade; <see langword="null"/> for other requests.
+    /// </param>
+    public async Task<ForwardingFailure?> SendAsync(HttpContext context, Uri target, Func<TunnelTelemetry>? startTunnel)
     {
         var activity = ActivityCancellationTokenSource.Rent(options.HttpActivityTimeout, context.RequestAborted);
         try
         {
-            var isUpgrade = IsWebSocketUpgrade(context);
+            var isUpgrade = startTunnel is not null;
             StreamCopyHttpContent? requestContent = null;
             HttpResponseMessage response;
             try
@@ -64,10 +73,10 @@ internal sealed class HttpForwarder(HttpMessageInvoker httpClient, ForwardProxyO
 
                 if (isUpgrade && response.StatusCode == HttpStatusCode.SwitchingProtocols)
                 {
-                    return await UpgradeAsync(context, response, activity).ConfigureAwait(false);
+                    return await UpgradeAsync(context, response, activity, startTunnel!).ConfigureAwait(false);
                 }
 
-                (StreamCopyResult Result, Exception? Error) responseCopy;
+                (StreamCopyResult Result, Exception? Error, long Bytes) responseCopy;
                 var responseStream = await response.Content.ReadAsStreamAsync(activity.Token).ConfigureAwait(false);
                 await using (responseStream.ConfigureAwait(false))
                 {
@@ -144,7 +153,7 @@ internal sealed class HttpForwarder(HttpMessageInvoker httpClient, ForwardProxyO
         }
     }
 
-    private async Task<ForwardingFailure?> UpgradeAsync(HttpContext context, HttpResponseMessage response, ActivityCancellationTokenSource requestActivity)
+    private async Task<ForwardingFailure?> UpgradeAsync(HttpContext context, HttpResponseMessage response, ActivityCancellationTokenSource requestActivity, Func<TunnelTelemetry> startTunnel)
     {
         if (ForwardingHeaders.TryGetValues(response.Headers, HeaderNames.Upgrade, out var upgrade))
         {
@@ -167,17 +176,20 @@ internal sealed class HttpForwarder(HttpMessageInvoker httpClient, ForwardProxyO
         await using var __ = clientStream.ConfigureAwait(false);
 
         // An upgraded connection is a tunnel: apply the tunnel idle timeout rather than the HTTP activity timeout.
+        var telemetry = startTunnel();
         var activity = ActivityCancellationTokenSource.Rent(options.TunnelIdleTimeout, context.RequestAborted);
+        var requestTask = StreamCopier.CopyAsync(clientStream, destinationStream, StreamCopier.UnknownLength, activity, autoFlush: false, activity.Token).AsTask();
+        var responseTask = StreamCopier.CopyAsync(destinationStream, clientStream, StreamCopier.UnknownLength, activity, autoFlush: false, activity.Token).AsTask();
+        var cancelled = false;
         try
         {
-            var requestTask = StreamCopier.CopyAsync(clientStream, destinationStream, StreamCopier.UnknownLength, activity, autoFlush: false, activity.Token).AsTask();
-            var responseTask = StreamCopier.CopyAsync(destinationStream, clientStream, StreamCopier.UnknownLength, activity, autoFlush: false, activity.Token).AsTask();
             var firstTask = await Task.WhenAny(requestTask, responseTask).ConfigureAwait(false);
             var requestFinishedFirst = firstTask == requestTask;
             var secondTask = requestFinishedFirst ? responseTask : requestTask;
-            var (firstResult, firstException) = await firstTask.ConfigureAwait(false);
+            var (firstResult, firstException, _) = await firstTask.ConfigureAwait(false);
             if (firstResult != StreamCopyResult.Success)
             {
+                cancelled = !activity.IsCancellationRequested;
                 activity.Cancel();
                 await secondTask.ConfigureAwait(false);
                 return Failure(requestFinishedFirst, firstResult, firstException!);
@@ -187,16 +199,23 @@ internal sealed class HttpForwarder(HttpMessageInvoker httpClient, ForwardProxyO
             var cancelReads = !requestFinishedFirst && !secondTask.IsCompleted;
             if (cancelReads)
             {
+                cancelled = true;
                 activity.Cancel();
             }
 
-            var (secondResult, secondException) = await secondTask.ConfigureAwait(false);
+            var (secondResult, secondException, _) = await secondTask.ConfigureAwait(false);
             return !cancelReads && secondResult != StreamCopyResult.Success ? Failure(!requestFinishedFirst, secondResult, secondException!) : null;
         }
         finally
         {
+            // Both copies have completed here; CopyAsync reports failures instead of throwing.
+            var idleTimedOut = !cancelled && activity.IsCancellationRequested && !activity.CancelledByLinkedToken;
+            telemetry.Complete(BytesCopied(requestTask), BytesCopied(responseTask), idleTimedOut);
             activity.Return();
         }
+
+        static long BytesCopied(Task<(StreamCopyResult Result, Exception? Error, long Bytes)> task) =>
+            task.IsCompletedSuccessfully ? task.Result.Bytes : 0;
 
         static ForwardingFailure? Failure(bool request, StreamCopyResult result, Exception exception) => result switch
         {
@@ -261,7 +280,8 @@ internal sealed class HttpForwarder(HttpMessageInvoker httpClient, ForwardProxyO
         return true;
     }
 
-    private static bool IsWebSocketUpgrade(HttpContext context) =>
+    /// <summary>Whether the request asks to upgrade to a WebSocket and the server can upgrade it.</summary>
+    public static bool IsWebSocketUpgrade(HttpContext context) =>
         context.Features.Get<IHttpUpgradeFeature>()?.IsUpgradableRequest == true
         && string.Equals(context.Request.Headers.Upgrade.ToString(), WebSocket, StringComparison.OrdinalIgnoreCase);
 

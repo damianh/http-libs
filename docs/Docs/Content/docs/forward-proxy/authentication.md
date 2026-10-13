@@ -14,6 +14,10 @@ resource. Set it with `ForwardProxyOptions.AuthorizationPolicy` or
 `AuthorizationPolicyName`. With neither set, the proxy allows anonymous clients
 and logs a warning.
 
+A policy that names no authentication schemes uses the default authenticate
+scheme (`AddAuthentication("scheme")`), the same as ASP.NET Core's
+authorization middleware.
+
 ## Proxy Basic authentication
 
 `AddProxyBasic` implements RFC 7617 Basic authentication over

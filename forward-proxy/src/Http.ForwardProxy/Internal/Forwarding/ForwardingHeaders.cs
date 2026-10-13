@@ -10,6 +10,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
 
@@ -59,13 +60,22 @@ internal static class ForwardingHeaders
     public static void CopyRequestHeaders(HttpRequest source, HttpRequestMessage destination)
     {
         var connectionOptions = source.Headers.GetCommaSeparatedValues(HeaderNames.Connection);
+
+        // Kestrel drops options from a Connection header that also lists close, keep-alive or upgrade.
+        string[]? rawConnectionOptions = null;
+        if (source.HttpContext.Features.Get<IHttp1ConnectionOptionsFeature>() is { } observed)
+        {
+            observed.TryGetConnectionOptions(source.HttpContext.Features.Get<IHttpRequestFeature>()!.RawTarget, out rawConnectionOptions);
+        }
+
         foreach (var (name, value) in source.Headers)
         {
             // Host is derived from the target URI (RFC 9112 §3.2.2); pseudo-headers aren't real headers.
             if (HeadersToExclude.Contains(name)
                 || name.StartsWith(':')
                 || string.Equals(name, HeaderNames.Host, StringComparison.OrdinalIgnoreCase)
-                || ContainsToken(connectionOptions, name))
+                || ContainsToken(connectionOptions, name)
+                || (rawConnectionOptions is not null && ContainsToken(rawConnectionOptions, name)))
             {
                 continue;
             }
@@ -141,7 +151,7 @@ internal static class ForwardingHeaders
             }
         }
 
-        if (request.Headers.TryAddWithoutValidation(name, (IEnumerable<string>)value!))
+        if (TryAdd(request.Headers, name, value))
         {
             return;
         }
@@ -151,8 +161,17 @@ internal static class ForwardingHeaders
             request.Content = new EmptyHttpContent();
         }
 
-        request.Content?.Headers.TryAddWithoutValidation(name, (IEnumerable<string>)value!);
+        if (request.Content is not null)
+        {
+            TryAdd(request.Content.Headers, name, value);
+        }
     }
+
+    // The string overload avoids boxing StringValues for the common single-valued header.
+    private static bool TryAdd(HttpHeaders headers, string name, StringValues value) =>
+        value.Count == 1
+            ? headers.TryAddWithoutValidation(name, value[0])
+            : headers.TryAddWithoutValidation(name, (IEnumerable<string>)value!);
 
     private static bool ContainsToken(string[] tokens, string name)
     {

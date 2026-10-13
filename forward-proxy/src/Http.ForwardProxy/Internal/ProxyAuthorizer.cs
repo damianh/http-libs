@@ -30,6 +30,11 @@ internal sealed class ProxyAuthorizer(IOptions<ForwardProxyOptions> options, ISe
             return true;
         }
 
+        if (policy.AuthenticationSchemes.Count == 0)
+        {
+            await AuthenticateDefaultSchemeAsync(context).ConfigureAwait(false);
+        }
+
         var evaluator = context.RequestServices.GetRequiredService<IPolicyEvaluator>();
         var authentication = await evaluator.AuthenticateAsync(policy, context).ConfigureAwait(false);
         var authorization = await evaluator.AuthorizeAsync(policy, authentication, context, destination).ConfigureAwait(false);
@@ -66,6 +71,31 @@ internal sealed class ProxyAuthorizer(IOptions<ForwardProxyOptions> options, ISe
         if (response.Headers.Remove(HeaderNames.WWWAuthenticate, out var challenges))
         {
             response.Headers.Append(HeaderNames.ProxyAuthenticate, challenges);
+        }
+    }
+
+    /// <summary>
+    /// A policy without schemes makes <see cref="IPolicyEvaluator"/> rely on <see cref="HttpContext.User"/>, which
+    /// authentication middleware never populates for the synthetic CONNECT context or when the proxy runs before
+    /// <c>UseAuthentication</c>. Authenticate the default scheme here instead, as the middleware would.
+    /// </summary>
+    private static async Task AuthenticateDefaultSchemeAsync(HttpContext context)
+    {
+        if (context.User.Identity?.IsAuthenticated == true)
+        {
+            return;
+        }
+
+        var schemes = context.RequestServices.GetService<IAuthenticationSchemeProvider>();
+        if (schemes is null || await schemes.GetDefaultAuthenticateSchemeAsync().ConfigureAwait(false) is null)
+        {
+            return;
+        }
+
+        var result = await context.AuthenticateAsync().ConfigureAwait(false);
+        if (result.Succeeded)
+        {
+            context.User = result.Principal;
         }
     }
 

@@ -21,7 +21,8 @@ vector. The defaults are restrictive. Loosen them deliberately.
    host must match).
 4. **IP literal targets** are checked against the network rules immediately.
 5. **`IForwardProxyDestinationFilter`** services, in registration order.
-6. **Concurrency**: `MaxConcurrentTunnels` (default 10,000) for `CONNECT`.
+6. **Concurrency**: `MaxConcurrentTunnels` (default 10,000) for `CONNECT`
+   tunnels and WebSocket upgrades.
 7. **DNS resolution and connect**: every resolved address is checked against
    the network rules, and the proxy connects to that exact address.
 
@@ -103,7 +104,7 @@ response is controlled by the proxy.
 | `HttpActivityTimeout` | 100 s | Maximum time without progress when forwarding `http://` requests |
 | `ConnectRequestHeadersTimeout` | 30 s | Time allowed to receive an HTTP/1.1 `CONNECT` head |
 | `MaxConnectRequestHeadersSize` | 16 KiB | Larger HTTP/1.1 `CONNECT` heads get `431` |
-| `MaxConcurrentTunnels` | 10,000 | Further tunnels get `503`; `null` for no limit |
+| `MaxConcurrentTunnels` | 10,000 | Further tunnels (`CONNECT` and WebSocket upgrades) get `503`; `null` for no limit |
 
 HTTP/2 tunnels disable Kestrel's minimum data rate and maximum request body
 size for that stream; `TunnelIdleTimeout` governs them instead.

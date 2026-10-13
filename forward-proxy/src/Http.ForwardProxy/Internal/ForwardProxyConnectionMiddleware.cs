@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Connections.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Features;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,7 +24,7 @@ namespace DamianH.Http.ForwardProxy.Internal;
 /// API for turning an HTTP/1.1 request into a raw tunnel, so the request head is parsed here before Kestrel's HTTP
 /// layer sees it. Any other traffic is passed to Kestrel untouched.
 /// </summary>
-internal sealed class ForwardProxyConnectionMiddleware(ConnectionDelegate next, IServiceProvider services)
+internal sealed class ForwardProxyConnectionMiddleware(ConnectionDelegate next, IServiceProvider services, KestrelServerOptions serverOptions)
 {
     private const string ConnectMethod = "CONNECT";
     private static readonly byte[] TunnelEstablished = "HTTP/1.1 200 Connection established\r\n\r\n"u8.ToArray();
@@ -62,6 +63,7 @@ internal sealed class ForwardProxyConnectionMiddleware(ConnectionDelegate next, 
 
         if (passThrough)
         {
+            ObserveRequestHeads(connection);
             await next(connection).ConfigureAwait(false);
             return;
         }
@@ -160,6 +162,26 @@ internal sealed class ForwardProxyConnectionMiddleware(ConnectionDelegate next, 
             await output.WriteAsync(TunnelEstablished).ConfigureAwait(false);
             await tunnel.RunAsync(connection.Transport.Input, output, CancellationToken.None).ConfigureAwait(false);
         }
+    }
+
+    /// <summary>
+    /// Kestrel rewrites a <c>Connection</c> header that includes <c>close</c>, <c>keep-alive</c> or <c>upgrade</c>,
+    /// dropping the other options it lists. Observe the raw request heads so those options' headers can still be
+    /// removed before forwarding.
+    /// </summary>
+    private void ObserveRequestHeads(ConnectionContext connection)
+    {
+        var limits = serverOptions.Limits;
+        var observer = new Http1RequestHeadObserver(connection.Transport.Input, Math.Max(limits.MaxRequestLineSize, limits.MaxRequestHeadersTotalSize));
+        connection.Transport = new ObservedDuplexPipe(observer, connection.Transport.Output);
+        connection.Features.Set<IHttp1ConnectionOptionsFeature>(observer);
+    }
+
+    private sealed class ObservedDuplexPipe(PipeReader input, PipeWriter output) : IDuplexPipe
+    {
+        public PipeReader Input => input;
+
+        public PipeWriter Output => output;
     }
 
     private static DefaultHttpContext CreateContext(ConnectionContext connection, ConnectRequestParser.ConnectRequest request, IServiceProvider requestServices, Stream responseBody)

@@ -31,7 +31,7 @@ Connection: close
 | 502 | `destination_ip_unroutable`, `destination_unavailable` | Network unreachable or other connect failure |
 | 502 | `http_response_incomplete` | Destination response was invalid (`http://` only) |
 | 500 | `proxy_internal_error` | Unexpected proxy failure (logged) |
-| 503 | `connection_limit_reached` | `MaxConcurrentTunnels` reached |
+| 503 | `connection_limit_reached` | `MaxConcurrentTunnels` reached (`CONNECT` or WebSocket upgrade) |
 | 504 | `connection_timeout` | `ConnectTimeout` elapsed (including DNS), or `HttpActivityTimeout` for `http://` |
 
 `407` and authorization `403` responses come from the authentication handler
@@ -44,6 +44,7 @@ and the connection is closed.
 Logs use the categories `DamianH.Http.ForwardProxy.Internal.*`. Rejections
 (`Information`) include the request kind, host, port, status and reason.
 Tunnel closure (`Information`) includes duration and bytes in each direction.
+Upgraded WebSocket connections are tunnels too, in logs, metrics and traces.
 An open proxy logs a `Warning` at startup.
 
 ## Metrics

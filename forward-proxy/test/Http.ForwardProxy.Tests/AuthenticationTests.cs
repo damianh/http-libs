@@ -69,6 +69,23 @@ public class AuthenticationTests
     }
 
     [Fact]
+    public async Task ConnectAuthenticatesTheConfiguredDefaultScheme()
+    {
+        using var echo = new EchoServer();
+        await using var proxy = await ProxyHost.StartAsync(
+            options => options.AuthorizationPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build(),
+            services => services.AddAuthentication(ProxyBasicDefaults.AuthenticationScheme)
+                .AddProxyBasic(options => options.ValidateCredentials = (_, _, _) => ValueTask.FromResult(true)));
+        using var socket = await RawProxy.ConnectAsync(proxy.Port);
+        var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes("alice:password"));
+
+        await RawProxy.SendAsync(socket, $"CONNECT 127.0.0.1:{echo.Port} HTTP/1.1\r\nHost: 127.0.0.1:{echo.Port}\r\nProxy-Authorization: Basic {credentials}\r\n\r\n");
+        var response = await RawProxy.ReadResponseAsync(socket);
+
+        response.StatusCode.ShouldBe(200);
+    }
+
+    [Fact]
     public async Task PolicyCanAuthorizeByDestination()
     {
         using var echo = new EchoServer();

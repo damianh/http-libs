@@ -24,7 +24,7 @@ internal static class StreamCopier
 
     public const long UnknownLength = -1;
 
-    public static async ValueTask<(StreamCopyResult Result, Exception? Error)> CopyAsync(Stream input, Stream output, long promisedContentLength, ActivityCancellationTokenSource activityToken, bool autoFlush, CancellationToken cancellation)
+    public static async ValueTask<(StreamCopyResult Result, Exception? Error, long Bytes)> CopyAsync(Stream input, Stream output, long promisedContentLength, ActivityCancellationTokenSource activityToken, bool autoFlush, CancellationToken cancellation)
     {
         var buffer = ArrayPool<byte>.Shared.Rent(DefaultBufferSize);
         var read = 0;
@@ -54,15 +54,15 @@ internal static class StreamCopier
                 contentLength += read;
                 if (promisedContentLength != UnknownLength && contentLength > promisedContentLength)
                 {
-                    return (StreamCopyResult.InputError, new InvalidOperationException("More bytes received than the specified Content-Length."));
+                    return (StreamCopyResult.InputError, new InvalidOperationException("More bytes received than the specified Content-Length."), contentLength);
                 }
 
                 activityToken.ResetTimeout();
                 if (read == 0)
                 {
                     return promisedContentLength == UnknownLength || contentLength == promisedContentLength
-                        ? (StreamCopyResult.Success, null)
-                        : (StreamCopyResult.InputError, new InvalidOperationException($"Sent {contentLength} content bytes, but Content-Length promised {promisedContentLength}."));
+                        ? (StreamCopyResult.Success, null, contentLength)
+                        : (StreamCopyResult.InputError, new InvalidOperationException($"Sent {contentLength} content bytes, but Content-Length promised {promisedContentLength}."), contentLength);
                 }
 
                 await output.WriteAsync(buffer.AsMemory(0, read), cancellation).ConfigureAwait(false);
@@ -78,11 +78,11 @@ internal static class StreamCopier
         {
             if (activityToken.CancelledByLinkedToken)
             {
-                return (StreamCopyResult.Canceled, ex);
+                return (StreamCopyResult.Canceled, ex, contentLength);
             }
 
             // If the activity timeout fired while reading or writing, blame the sender or receiver.
-            return (read == 0 ? StreamCopyResult.InputError : StreamCopyResult.OutputError, ex);
+            return (read == 0 ? StreamCopyResult.InputError : StreamCopyResult.OutputError, ex, contentLength);
         }
         finally
         {

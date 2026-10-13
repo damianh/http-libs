@@ -12,7 +12,35 @@ namespace DamianH.Http.ForwardProxy.Internal;
 /// <summary>Handles HTTP/2 CONNECT tunnels and absolute-form <c>http://</c> requests in the request pipeline.</summary>
 internal sealed class ForwardProxyMiddleware(RequestDelegate next, ForwardProxyHandler handler, ILogger<ForwardProxyMiddleware> logger)
 {
+    private static readonly UriCreationOptions RawPathAndQuery = new() { DangerousDisablePathAndQueryCanonicalization = true };
+
     public Task InvokeAsync(HttpContext context)
+    {
+        if (context.Features.Get<IHttp1ConnectionOptionsFeature>() is { IsAwaitingUpgradeOutcome: true } observer)
+        {
+            return InvokeUpgradeRequestAsync(context, observer);
+        }
+
+        return InvokeCoreAsync(context);
+    }
+
+    private async Task InvokeUpgradeRequestAsync(HttpContext context, IHttp1ConnectionOptionsFeature observer)
+    {
+        try
+        {
+            await InvokeCoreAsync(context).ConfigureAwait(false);
+        }
+        finally
+        {
+            // A refused upgrade leaves the connection in HTTP/1.x, so later request heads can be observed again.
+            if (context.Response.StatusCode != StatusCodes.Status101SwitchingProtocols)
+            {
+                observer.ResumeAfterRejectedUpgrade();
+            }
+        }
+    }
+
+    private Task InvokeCoreAsync(HttpContext context)
     {
         var requestFeature = context.Features.Get<IHttpRequestFeature>()!;
         if (HttpMethods.IsConnect(context.Request.Method))
@@ -40,7 +68,8 @@ internal sealed class ForwardProxyMiddleware(RequestDelegate next, ForwardProxyH
         var rawTarget = requestFeature.RawTarget;
         if (rawTarget.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || rawTarget.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
         {
-            if (!Uri.TryCreate(rawTarget, UriKind.Absolute, out var target))
+            // Forward the path and query exactly as received; canonicalization would change what the origin sees.
+            if (!Uri.TryCreate(rawTarget, RawPathAndQuery, out var target))
             {
                 handler.SetError(context, ProxyError.BadTarget("Invalid request target."));
                 return Task.CompletedTask;

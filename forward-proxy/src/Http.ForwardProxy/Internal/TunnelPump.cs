@@ -84,6 +84,8 @@ internal static class TunnelPump
         {
             while (true)
             {
+                // Wait for data with a zero-byte read so idle tunnels don't each hold a buffer.
+                await stream.ReadAsync(Memory<byte>.Empty, cancellationToken).ConfigureAwait(false);
                 var memory = output.GetMemory(ReadBufferSize);
                 var read = await stream.ReadAsync(memory, cancellationToken).ConfigureAwait(false);
                 if (read == 0)

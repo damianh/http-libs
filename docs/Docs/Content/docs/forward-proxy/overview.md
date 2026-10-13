@@ -47,6 +47,21 @@ HTTP/2 `CONNECT` needs TLS with ALPN (`h2`) on the listener. Extended `CONNECT`
 `https://` targets are rejected with `400`; clients must use `CONNECT`. HTTP/3
 `CONNECT` is not supported and returns `501`.
 
+## Forwarding `http://` requests
+
+The request target's path and query are sent to the destination exactly as
+received, without normalizing dot segments or percent-encoding. The `Host`
+header comes from the target, so `ListenOptions.UseForwardProxy()` turns on
+`KestrelServerOptions.AllowHostHeaderOverride`. That setting is server-wide:
+Kestrel then replaces a mismatched `Host` header with the absolute target's
+authority on every listener.
+
+Hop-by-hop headers are removed, including headers the client names in
+`Connection`. Kestrel keeps only `close`, `keep-alive` or `upgrade` from a
+`Connection` header that lists one of them, so on HTTP/1.1 listeners the proxy
+also reads the request head as received to find the other names. That needs
+`ListenOptions.UseForwardProxy()` on the listener.
+
 ## Hosting
 
 ```csharp

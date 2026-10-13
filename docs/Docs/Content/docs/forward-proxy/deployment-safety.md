@@ -41,7 +41,7 @@ cross untrusted networks. Clients configure an `https://` proxy URL for this.
 
 ## Limit resources
 
-Each tunnel holds two connections. Tune `MaxConcurrentTunnels`,
+Each tunnel, `CONNECT` or WebSocket upgrade, holds two connections. Tune `MaxConcurrentTunnels`,
 `TunnelIdleTimeout`, and Kestrel's `MaxConcurrentConnections` and
 `MaxConcurrentUpgradedConnections` for your capacity. Monitor
 `forward_proxy.tunnels.active`.
