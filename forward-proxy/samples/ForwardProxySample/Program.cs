@@ -25,17 +25,27 @@ builder.Services
     .AddProxyBasic(options =>
     {
         options.Realm = "sample-proxy";
-        options.ValidateCredentials = (_, user, password) => ValueTask.FromResult(
-            CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(user), expectedUser)
-            & CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(password), expectedPassword));
+        options.ValidateCredentials = (_, user, password) =>
+        {
+            var userBytes = Encoding.UTF8.GetBytes(user);
+            var passwordBytes = Encoding.UTF8.GetBytes(password);
+            var userMatches = CryptographicOperations.FixedTimeEquals(userBytes, expectedUser);
+            var passwordMatches = CryptographicOperations.FixedTimeEquals(passwordBytes, expectedPassword);
+
+            // Non-short-circuiting & so both comparisons always run.
+            var valid = userMatches & passwordMatches;
+            return ValueTask.FromResult(valid);
+        };
     });
+
+var proxyPolicy = new AuthorizationPolicyBuilder(ProxyBasicDefaults.AuthenticationScheme)
+    .RequireAuthenticatedUser()
+    .Build();
 
 builder.Services.AddForwardProxy(options =>
 {
     options.ProxyName = "sample-proxy";
-    options.AuthorizationPolicy = new AuthorizationPolicyBuilder(ProxyBasicDefaults.AuthenticationScheme)
-        .RequireAuthenticatedUser()
-        .Build();
+    options.AuthorizationPolicy = proxyPolicy;
     options.DeniedHosts.Add("*.internal.example");
 });
 
