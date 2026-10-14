@@ -2,6 +2,11 @@
 // See LICENSE in the project root for license information.
 
 using System.Diagnostics;
+using System.Net;
+using System.Net.Http;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Shouldly;
 
 namespace DamianH.Http.ForwardProxy;
@@ -56,6 +61,32 @@ public class Http2ConnectTests
         exitCode.ShouldNotBe(0);
         error.ShouldContain("status: HTTP/2 403");
         error.ShouldContain("header: proxy-status: forward-proxy; error=destination_ip_prohibited");
+    }
+
+    [Fact]
+    public async Task PassesExtendedConnectToTheApplication()
+    {
+        await using var proxy = await ProxyHost.StartAsync(tls: true, configureApp: app => app.Map("/chat", (HttpContext context) =>
+            Results.Text(
+                $"method={context.Request.Method} protocol={context.Features.Get<IHttpExtendedConnectFeature>()?.Protocol}",
+                statusCode: StatusCodes.Status418ImATeapot)));
+        using var client = new HttpClient(new SocketsHttpHandler
+        {
+            SslOptions = { RemoteCertificateValidationCallback = (_, _, _, _) => true },
+        });
+        using var request = new HttpRequestMessage(HttpMethod.Connect, $"https://127.0.0.1:{proxy.Port}/chat")
+        {
+            Version = HttpVersion.Version20,
+            VersionPolicy = HttpVersionPolicy.RequestVersionExact,
+        };
+        request.Headers.Protocol = "websocket";
+
+        using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        response.StatusCode.ShouldBe((HttpStatusCode)StatusCodes.Status418ImATeapot);
+        response.Headers.Contains("Proxy-Status").ShouldBeFalse();
+        (await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken))
+            .ShouldBe("method=CONNECT protocol=websocket");
     }
 
     internal static async Task<(int ExitCode, string Output, string Error)> CurlAsync(params string[] args)

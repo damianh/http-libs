@@ -25,13 +25,15 @@ or renaming a protocol test.
 | §7.6.3 | Add `Via` with the received protocol version, append to existing values, on requests and responses | `HttpForwardingTests.ForwardsAbsoluteFormRequests`, `AppendsToReceivedViaHeaders`, `ForwardsWebSocketUpgrades`, `UsesTheConfiguredProxyNameInVia` |
 | §7.6.3 | Reject a request whose `Via` shows it already passed through this proxy (loop); forward other proxies' entries | `HttpForwardingTests.RejectsForwardingLoopsWithoutContactingTheOrigin`, `ForwardsWhenViaNamesOtherProxies`, `ForwardsLoopsWhenDetectionIsDisabled`; `ViaHeaderTests.*` |
 | §7.8 | Forward `Upgrade` (WebSocket only) and relay after `101` | `HttpForwardingTests.ForwardsWebSocketUpgrades`, `StripsMixedConnectionOptionsAfterARejectedUpgrade`; `TlsInterceptionTests.RelaysWebSocketsInsideTheTunnel` |
+| §8.6 | Do not add `Content-Length` to a `204` response | `HttpForwardingTests.DoesNotAddContentLengthToNoContentResponses` |
+| §10.1.1 | Forward `Expect: 100-continue`; send the request body after the interim `100` | `HttpForwardingTests.ForwardsExpectContinue` |
 | §6.6.2 | Do not advertise trailer fields that are not forwarded | `HttpForwardingTests.DoesNotAdvertiseRequestTrailersItDrops`, `DoesNotAdvertiseResponseTrailersItDrops` |
 | §9.3.6 | `CONNECT` uses authority-form with a port; reject content; `2xx` switches to a tunnel; restrict ports | `ConnectTunnelTests.TunnelsBytesIncludingEarlyDataAndPropagatesHalfClose`, `RejectsMalformedRequests`, `BlocksDisallowedPorts`; `ConnectRequestParserTests.RejectsMalformedRequests`, `AllowsZeroContentLength`; `AuthorityParserTests.*`; `DestinationPolicyTests.DefaultPortsAllow443ForConnectAnd80ForHttp` |
 | §9.3.6 | Tunnel closes when either side closes | `ConnectTunnelTests.TunnelsBytesIncludingEarlyDataAndPropagatesHalfClose`, `ClosesIdleTunnels` |
 | §11.7.1, §15.5.8 | Challenge with `407` and `Proxy-Authenticate` | `AuthenticationTests.ChallengesConnectWithoutCredentials`, `UnauthenticatedHttpRequestsAreChallenged`, `TranslatesOriginStyleChallenges` |
 | §11.7.2 | Consume `Proxy-Authorization`; do not forward it | `HttpForwardingTests.ForwardsAbsoluteFormRequests`, `AuthenticationTests.HttpClientAuthenticatesForConnectAndHttp` |
 | §15.5.20 | `421` when a request in an intercepted tunnel targets another host | `TlsInterceptionTests.RejectsRequestsForAnotherHost` |
-| §15.6.3 | `502` when the destination fails | `HttpForwardingTests.ReportsUnreachableOrigins`, `ReportsInvalidOriginResponsesAsIncomplete`; `ConnectTunnelTests.ReportsRefusedConnections` |
+| §15.6.3 | `502` when the destination fails | `HttpForwardingTests.ReportsUnreachableOrigins`, `ReportsInvalidOriginResponsesAsIncomplete`, `ReportsResetOriginConnectionsAsUnavailable`; `ConnectTunnelTests.ReportsRefusedConnections`, `ReportsUnresolvableHosts`, `ReportsUnroutableDestinations` |
 | §15.6.4 | `503` when the proxy is at capacity | `ConnectTunnelTests.LimitsConcurrentTunnels`, `HttpForwardingTests.WebSocketUpgradesRespectTheTunnelLimit` |
 | §15.6.5 | `504` when the destination does not respond in time | `HttpForwardingTests.ReportsOriginsThatDoNotRespondAsTimedOut`, `TlsInterceptionTests.CancelsAnInterceptionSelectorAfterConnectTimeout` |
 
@@ -50,7 +52,8 @@ or renaming a protocol test.
 | §2.2, §5.1, §5.2 | Reject bare CR/LF, whitespace before `:`, and `obs-fold` in a `CONNECT` head | `ConnectRequestParserTests.RejectsMalformedRequests`, `ConnectTunnelTests.RejectsMalformedRequests` |
 | §2.3 | Accept `HTTP/1.0` and `HTTP/1.1`; reject other versions on `CONNECT` | `ConnectRequestParserTests.ParsesRequestWithoutHeadersAndHttp10`, `RejectsMalformedRequests`; `HttpForwardingTests.AppendsToReceivedViaHeaders` |
 | §6.1, §7.1 | Forward chunked request bodies | `HttpForwardingTests.ForwardsChunkedRequestBodies` |
-| §6.3 | Do not forward `Content-Length` together with `Transfer-Encoding` | `HttpForwardingTests.DoesNotForwardContentLengthWithTransferEncoding` (Kestrel already drops the field; the proxy's own check is defense in depth) |
+| §6.3 | Do not forward `Content-Length` together with `Transfer-Encoding` on requests | `HttpForwardingTests.DoesNotForwardContentLengthWithTransferEncoding` (Kestrel already drops the request field, so the test restores it in middleware to exercise the proxy's own check) |
+| §6.3 | Do not forward `Content-Length` together with `Transfer-Encoding` on responses | `HttpForwardingTests.DoesNotForwardResponseContentLengthWithTransferEncoding` |
 | §9.3 | Pipelined requests on a keep-alive connection | `HttpForwardingTests.StripsMixedConnectionOptionsAcrossKeepAliveRequests`, `Http1RequestHeadObserverTests.FollowsPipelinedRequestsAcrossEverySplit` |
 | §9.6 | Close the connection after an error response to `CONNECT` | `ConnectTunnelTests.BlocksLoopbackByDefault`, `RejectsMalformedRequests`; `AuthenticationTests.ChallengesConnectWithoutCredentials` |
 
@@ -61,9 +64,11 @@ or renaming a protocol test.
 | `CONNECT` with `:authority` opens a tunnel; `200` then `DATA` frames carry the bytes | `Http2ConnectTests.TunnelsOverHttp2`, `TlsInterceptionTests.InterceptsHttp2Connect` |
 | A denied tunnel gets a final non-`2xx` response | `Http2ConnectTests.ReportsDeniedTunnelsOverHttp2` |
 | HTTP/1.1 `CONNECT` still works on the same TLS listener | `Http2ConnectTests.Http1ConnectStillWorksOnTlsListener` |
+| [RFC 8441](https://www.rfc-editor.org/rfc/rfc8441.html) extended `CONNECT` is passed to the application, not tunneled | `Http2ConnectTests.PassesExtendedConnectToTheApplication` |
+| Extended `CONNECT` inside an intercepted tunnel is rejected with `400` | `TlsInterceptionTests.RejectsExtendedConnectInsideTheTunnel` |
 
-These tests use `curl --proxy-http2` and are skipped when that curl is not
-available.
+The classic `CONNECT` tests use `curl --proxy-http2` and are skipped when that
+curl is not available.
 
 ## RFC 9209: `Proxy-Status`
 
@@ -71,7 +76,10 @@ available.
 |---|---|
 | `destination_ip_prohibited` | `ConnectTunnelTests.BlocksLoopbackByDefault`, `HttpForwardingTests.DoesNotRouteAbsoluteFormRequestsToTheProxyApplication`, `Http2ConnectTests.ReportsDeniedTunnelsOverHttp2`, `DestinationPolicyTests.NonPublicIpLiteralsFailFast` |
 | `http_request_denied` | `ConnectTunnelTests.BlocksDisallowedPorts`, `CustomFiltersCanDenyDestinations`; `HttpForwardingTests.RejectsDisallowedHttpPorts`, `RejectsForwardingLoopsWithoutContactingTheOrigin`; `TlsInterceptionTests.RejectsRequestsForAnotherHost` |
-| `http_request_error` | `HttpForwardingTests.RejectsAbsoluteFormHttpsTargets` |
+| `http_request_error` | `HttpForwardingTests.RejectsAbsoluteFormHttpsTargets`, `TlsInterceptionTests.RejectsExtendedConnectInsideTheTunnel` |
+| `dns_error` | `ConnectTunnelTests.ReportsUnresolvableHosts` |
+| `destination_ip_unroutable` | `ConnectTunnelTests.ReportsUnroutableDestinations` (Linux only) |
+| `destination_unavailable` | `HttpForwardingTests.ReportsResetOriginConnectionsAsUnavailable` |
 | `connection_refused` | `ConnectTunnelTests.ReportsRefusedConnections`, `HttpForwardingTests.ReportsUnreachableOrigins` |
 | `connection_limit_reached` | `ConnectTunnelTests.LimitsConcurrentTunnels` |
 | `connection_timeout` | `HttpForwardingTests.ReportsOriginsThatDoNotRespondAsTimedOut` |
@@ -84,17 +92,24 @@ The proxy name in each value is checked by `ConnectTunnelTests.BlocksLoopbackByD
 
 ## Gaps
 
+Not implemented:
+
+- **HTTP/2 tunnel errors** (RFC 9113 §8.5): when the destination connection
+  fails (for example, it is reset), the proxy ends the HTTP/2 stream normally
+  with `END_STREAM` instead of resetting it with `CONNECT_ERROR`.
+
 Implemented but not covered by a test:
 
-- `Proxy-Status` types `dns_error`, `dns_timeout`, `destination_ip_unroutable`
-  and `destination_unavailable` (need DNS or network failure injection).
+- `Proxy-Status` type `dns_timeout`: DNS resolution calls `Dns` directly with
+  no injectable resolver, so a resolution that is slower than the timeout
+  cannot be produced reliably.
+- `destination_unavailable` from the `CONNECT` dialer (socket errors other than
+  refused, unreachable or timed out): no seam to inject such an error. The
+  forwarding path is covered.
 - Removal of a `Content-Length: 0` that `HttpClient` adds to `1xx`, `204` and
-  `205` responses, and of `Content-Length` with `Transfer-Encoding` on responses
-  (RFC 9110 §8.6, RFC 9112 §6.3).
-- `Expect: 100-continue` (RFC 9110 §10.1.1) on forwarded requests.
-- RFC 9113 §8.5: a TCP error on an HTTP/2 tunnel resetting the stream with
-  `CONNECT_ERROR`.
-- [RFC 8441](https://www.rfc-editor.org/rfc/rfc8441.html) extended `CONNECT`
-  passing through to the application, and its `400` rejection inside
-  intercepted tunnels.
-- HTTP/3 `CONNECT` returning `501`.
+  `205` responses (RFC 9110 §8.6). Kestrel also drops `Content-Length` from
+  `204` responses and adds `Content-Length: 0` to `205` responses (RFC 9110
+  §15.3.6), so the proxy's check cannot be observed through Kestrel.
+  `DoesNotAddContentLengthToNoContentResponses` checks only the end result.
+- HTTP/3 `CONNECT` returning `501`: the test environments have no QUIC
+  support (`libmsquic`), so Kestrel cannot listen for HTTP/3.
