@@ -2,6 +2,7 @@
 // See LICENSE in the project root for license information.
 
 using System.Diagnostics;
+using System.Globalization;
 using System.IO.Pipelines;
 using System.Net;
 using System.Net.Http;
@@ -160,7 +161,58 @@ internal sealed class ForwardProxyHandler : IDisposable
             return;
         }
 
+        if (TryAnswerMaxForwards(context))
+        {
+            _metrics.Request(ForwardProxyRequestKind.Http, Outcomes.Allowed);
+            return;
+        }
+
         await ForwardAsync(context, target, destination, intercepted: false).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Applies <c>Max-Forwards</c> to a TRACE or OPTIONS request (RFC 9110 §7.6.2): a positive value is decremented
+    /// before forwarding; at zero the proxy answers itself. Returns <see langword="true"/> if the response was written.
+    /// An invalid value is forwarded unchanged.
+    /// </summary>
+    private static bool TryAnswerMaxForwards(HttpContext context)
+    {
+        var request = context.Request;
+        var isTrace = HttpMethods.IsTrace(request.Method);
+        if (!isTrace && !HttpMethods.IsOptions(request.Method)
+            || !TryParseMaxForwards(request.Headers.MaxForwards, out var maxForwards))
+        {
+            return false;
+        }
+
+        if (maxForwards > 0)
+        {
+            request.Headers.MaxForwards = (maxForwards - 1).ToString(CultureInfo.InvariantCulture);
+            return false;
+        }
+
+        // TRACE is not echoed: reflecting the request (including credentials) enables cross-site tracing.
+        if (isTrace)
+        {
+            context.Response.StatusCode = StatusCodes.Status405MethodNotAllowed;
+            context.Response.Headers.Allow = "OPTIONS";
+        }
+        else
+        {
+            context.Response.StatusCode = StatusCodes.Status200OK;
+        }
+
+        context.Response.ContentLength = 0;
+        return true;
+    }
+
+    private static bool TryParseMaxForwards(Microsoft.Extensions.Primitives.StringValues values, out ulong maxForwards)
+    {
+        maxForwards = 0;
+        return values.Count == 1
+            && values[0] is { Length: > 0 } value
+            && value.AsSpan().IndexOfAnyExceptInRange('0', '9') < 0
+            && ulong.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out maxForwards);
     }
 
     /// <summary>
