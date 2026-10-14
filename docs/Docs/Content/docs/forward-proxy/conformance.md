@@ -99,7 +99,6 @@ gating. Only full runs may use `--update`; review the diff before committing it.
 | `target-empty-path`, `target-options-empty-path` | `http://host` is forwarded with an empty request-target (`GET  HTTP/1.1`) instead of `/` (RFC 9112 §3.2.1), or `*` for `OPTIONS` with no query: §3.2.4 requires the last proxy to send asterisk-form here, overriding the general origin-form rule. |
 | `target-fragment` | `#fragment` is forwarded in the request-target. |
 | `target-uppercase-scheme` | `HTTP://` is rejected with `400` by Kestrel before the proxy runs. |
-| `max-forwards-zero-options`, `max-forwards-decremented` | `Max-Forwards` is not processed (RFC 9110 §7.6.2). |
 | `framing-content-length-plus-sign` | `Content-Length: +5` is accepted by Kestrel and forwarded as `5`. |
 | `framing-te-in-http10` | An HTTP/1.0 request with `Transfer-Encoding` is forwarded rather than treated as faulty framing. |
 
