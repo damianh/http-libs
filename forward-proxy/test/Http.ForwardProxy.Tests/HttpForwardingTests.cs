@@ -455,6 +455,106 @@ public class HttpForwardingTests
     }
 
 
+    [Theory]
+    [InlineData("OPTIONS")]
+    [InlineData("TRACE")]
+    public async Task DecrementsMaxForwardsOnForwardedTraceAndOptions(string method)
+    {
+        await using var origin = await StartOriginAsync(context =>
+            context.Response.WriteAsync($"max-forwards=[{context.Request.Headers.MaxForwards}]\n", context.RequestAborted));
+        await using var proxy = await ProxyHost.StartAsync();
+        using var socket = await RawProxy.ConnectAsync(proxy.Port);
+        var port = ProxyHost.GetPort(origin);
+
+        await RawProxy.SendAsync(socket, $"{method} http://127.0.0.1:{port}/ HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\nMax-Forwards: 5\r\n\r\n");
+        var response = await RawProxy.ReadResponseAsync(socket);
+        var body = await RawProxy.ReadToEndAsync(socket, response.Body);
+
+        response.StatusCode.ShouldBe(200);
+        body.ShouldContain("max-forwards=[4]\n");
+    }
+
+    [Fact]
+    public async Task AnswersOptionsWithZeroMaxForwardsWithoutContactingTheOrigin()
+    {
+        var originRequests = 0;
+        await using var origin = await StartOriginAsync(_ =>
+        {
+            Interlocked.Increment(ref originRequests);
+            return Task.CompletedTask;
+        });
+        await using var proxy = await ProxyHost.StartAsync();
+        using var socket = await RawProxy.ConnectAsync(proxy.Port);
+        var port = ProxyHost.GetPort(origin);
+
+        await RawProxy.SendAsync(socket, $"OPTIONS http://127.0.0.1:{port}/ HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\nMax-Forwards: 0\r\n\r\n");
+        var response = await RawProxy.ReadResponseAsync(socket);
+
+        response.StatusCode.ShouldBe(200);
+        response.Header("Content-Length").ShouldBe("0");
+        originRequests.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task RefusesTraceWithZeroMaxForwardsWithoutEchoingOrContactingTheOrigin()
+    {
+        var originRequests = 0;
+        await using var origin = await StartOriginAsync(_ =>
+        {
+            Interlocked.Increment(ref originRequests);
+            return Task.CompletedTask;
+        });
+        await using var proxy = await ProxyHost.StartAsync();
+        using var socket = await RawProxy.ConnectAsync(proxy.Port);
+        var port = ProxyHost.GetPort(origin);
+
+        await RawProxy.SendAsync(socket, $"TRACE http://127.0.0.1:{port}/ HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\nMax-Forwards: 0\r\nCookie: secret=1\r\n\r\n");
+        var response = await RawProxy.ReadResponseAsync(socket);
+        var body = await RawProxy.ReadToEndAsync(socket, response.Body);
+
+        response.StatusCode.ShouldBe(405);
+        response.Header("Content-Length").ShouldBe("0");
+        body.ShouldBeEmpty();
+        originRequests.ShouldBe(0);
+    }
+
+    [Theory]
+    [InlineData("OPTIONS", "abc")]
+    [InlineData("TRACE", "-1")]
+    [InlineData("OPTIONS", "1, 2")]
+    public async Task ForwardsInvalidMaxForwardsUnchanged(string method, string maxForwards)
+    {
+        await using var origin = await StartOriginAsync(context =>
+            context.Response.WriteAsync($"max-forwards=[{context.Request.Headers.MaxForwards}]\n", context.RequestAborted));
+        await using var proxy = await ProxyHost.StartAsync();
+        using var socket = await RawProxy.ConnectAsync(proxy.Port);
+        var port = ProxyHost.GetPort(origin);
+
+        await RawProxy.SendAsync(socket, $"{method} http://127.0.0.1:{port}/ HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\nMax-Forwards: {maxForwards}\r\n\r\n");
+        var response = await RawProxy.ReadResponseAsync(socket);
+        var body = await RawProxy.ReadToEndAsync(socket, response.Body);
+
+        response.StatusCode.ShouldBe(200);
+        body.ShouldContain($"max-forwards=[{maxForwards}]\n");
+    }
+
+    [Fact]
+    public async Task DoesNotApplyMaxForwardsToOtherMethods()
+    {
+        await using var origin = await StartOriginAsync(context =>
+            context.Response.WriteAsync($"max-forwards=[{context.Request.Headers.MaxForwards}]\n", context.RequestAborted));
+        await using var proxy = await ProxyHost.StartAsync();
+        using var socket = await RawProxy.ConnectAsync(proxy.Port);
+        var port = ProxyHost.GetPort(origin);
+
+        await RawProxy.SendAsync(socket, $"GET http://127.0.0.1:{port}/ HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\nMax-Forwards: 0\r\n\r\n");
+        var response = await RawProxy.ReadResponseAsync(socket);
+        var body = await RawProxy.ReadToEndAsync(socket, response.Body);
+
+        response.StatusCode.ShouldBe(200);
+        body.ShouldContain("max-forwards=[0]\n");
+    }
+
     private static async Task<WebApplication> StartOriginAsync(RequestDelegate handler)
     {
         var builder = WebApplication.CreateSlimBuilder();

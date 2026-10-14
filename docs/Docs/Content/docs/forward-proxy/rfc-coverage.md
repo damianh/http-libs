@@ -21,6 +21,7 @@ or renaming a protocol test.
 |---|---|---|
 | §7.6.1 | Remove headers named in `Connection` (requests and responses) | `HttpForwardingTests.StripsHeadersNamedInConnection`, `StripsConnectionOptionsWhenCloseIsAlsoPresent`, `StripsMixedConnectionOptionsAcrossKeepAliveRequests`, `StripsMixedConnectionOptionsAfterARejectedUpgrade`; `Http1RequestHeadObserverTests.*` |
 | §7.6.1 | Do not forward fixed hop-by-hop fields (`Proxy-Connection`, `Keep-Alive`, `TE`, `HTTP2-Settings`) | `HttpForwardingTests.DoesNotForwardHopByHopRequestHeaders`, `HttpForwardingTests.ForwardsAbsoluteFormRequests` |
+| §7.6.2 | `Max-Forwards` on `TRACE`/`OPTIONS`: decrement a positive value; at `0` answer without forwarding (`OPTIONS` `200`, `TRACE` `405`, never echoed); forward invalid values unchanged; other methods untouched | `HttpForwardingTests.DecrementsMaxForwardsOnForwardedTraceAndOptions`, `AnswersOptionsWithZeroMaxForwardsWithoutContactingTheOrigin`, `RefusesTraceWithZeroMaxForwardsWithoutEchoingOrContactingTheOrigin`, `ForwardsInvalidMaxForwardsUnchanged`, `DoesNotApplyMaxForwardsToOtherMethods` |
 | §7.6.3 | Add `Via` with the received protocol version, append to existing values, on requests and responses | `HttpForwardingTests.ForwardsAbsoluteFormRequests`, `AppendsToReceivedViaHeaders`, `ForwardsWebSocketUpgrades` |
 | §7.8 | Forward `Upgrade` (WebSocket only) and relay after `101` | `HttpForwardingTests.ForwardsWebSocketUpgrades`, `StripsMixedConnectionOptionsAfterARejectedUpgrade`; `TlsInterceptionTests.RelaysWebSocketsInsideTheTunnel` |
 | §6.6.2 | Do not advertise trailer fields that are not forwarded | `HttpForwardingTests.DoesNotAdvertiseRequestTrailersItDrops`, `DoesNotAdvertiseResponseTrailersItDrops` |
@@ -84,8 +85,6 @@ The proxy name in each value is checked by `ConnectTunnelTests.BlocksLoopbackByD
 
 Not implemented:
 
-- **`Max-Forwards`** (RFC 9110 §7.6.2): the proxy does not check or decrement
-  `Max-Forwards` on `TRACE` or `OPTIONS`; it is forwarded unchanged.
 - **`Via` loop detection**: the proxy does not reject requests whose `Via`
   already contains its own name.
 
