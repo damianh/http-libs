@@ -39,21 +39,16 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Setup Python
+      - name: Setup Python (HTTP Garden origin)
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
 
-      - name: Verify result gate
-        run: node --test forward-proxy/conformance/compare-results.test.mjs
+      - name: Harness tests and conformance gate (built-in origin)
+        run: dotnet test --project forward-proxy/conformance/ForwardProxyConformance.Tests -c Release
 
-      - name: Run conformance fixtures
-        run: bash forward-proxy/conformance/run-conformance.sh
+      - name: Conformance gate (HTTP Garden origin)
+        run: dotnet run --project forward-proxy/conformance/ForwardProxyConformance -c Release -- --garden-origin
 
       - name: Upload conformance results
         if: always()
@@ -61,6 +56,6 @@ jobs:
         with:
           name: forward-proxy-conformance-results
           path: |
-            forward-proxy/conformance/results-full.json
-            forward-proxy/conformance/full-*.log
+            forward-proxy/conformance/results-*.json
+            forward-proxy/conformance/*.log
           if-no-files-found: ignore

@@ -1,36 +1,32 @@
 # Forward proxy HTTP/1.1 conformance fixtures
 
 A reproducible request-direction regression suite for `http://` absolute-form
-forwarding, built on a pinned [HTTP Garden](https://github.com/narfindustries/http-garden)
-checkout (`b417e806c1b15e8ea0b9312f81a91fbdcbc7a83e`).
+forwarding. It is written entirely in C#: `ForwardProxyConformance` hosts the
+proxy in-process, replays the repo-owned corpus in `fixtures.json` over raw
+sockets to an echo origin, and gates the results against `expected-results.json`.
+Results are regression signals, not standards certification.
 
-HTTP Garden is a differential-testing toolkit, not a conformance suite: it has no
-fixture corpus or pass/fail oracle. This harness uses Garden's echo origin, HTTP/1
-parsers and `HTTPRequest.is_valid()` rules, plus a repo-owned corpus in
-`fixtures.json` with RFC 9110/9112 expectations. Results are regression signals,
-not standards certification.
+The default origin is built in. `--garden-origin` swaps in the
+[HTTP Garden](https://github.com/narfindustries/http-garden) echo server at a
+pinned commit (`b417e806c1b15e8ea0b9312f81a91fbdcbc7a83e`) as an independent
+third-party origin; both must produce the same baseline.
 
 **[Full guide](https://damianh.github.io/http-libs/docs/forward-proxy/conformance/)**
 covers the fixture format, expectations, known failures and limitations.
 
-Requires .NET 10 SDK, Node.js 22+, Python 3.12+ (standard library only) and Git.
-Docker is not needed. Run from this directory:
+Requires the .NET 10 SDK. `--garden-origin` also needs Git and Python 3.12+
+(standard library only); Docker is never needed. From the repository root:
 
 ```bash
-./run-conformance.sh                       # full run, gated against expected-results.json
-./run-conformance.sh --test-id host-missing # diagnostic, does not gate
-./run-conformance.sh --update               # rewrite the baseline after review
-./run-conformance.sh --serve                # keep the proxy and echo origin up for the Garden REPL
-```
+dotnet test --project forward-proxy/conformance/ForwardProxyConformance.Tests   # harness tests + full gate
 
-```powershell
-.\run-conformance.ps1
-.\run-conformance.ps1 -TestId host-missing
+cd forward-proxy/conformance
+dotnet run --project ForwardProxyConformance -c Release                              # full run, gated
+dotnet run --project ForwardProxyConformance -c Release -- --test-id host-missing    # diagnostic, does not gate
+dotnet run --project ForwardProxyConformance -c Release -- --update                  # rewrite the baseline after review
+dotnet run --project ForwardProxyConformance -c Release -- --garden-origin           # gate using HTTP Garden's origin
+dotnet run --project ForwardProxyConformance -c Release -- --serve                   # keep proxy and origin up for the Garden REPL
 ```
 
 `results-*.json`, logs and `.http-garden/` are ignored by Git. HTTP Garden is
-GPL-3.0 and is cloned at run time, never vendored. Harness tests:
-
-```bash
-node --test compare-results.test.mjs
-```
+GPL-3.0 and is cloned at run time, never vendored; no Garden code is ported.

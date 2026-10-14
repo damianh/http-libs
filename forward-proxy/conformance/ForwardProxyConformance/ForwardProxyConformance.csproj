@@ -3,10 +3,13 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
+    <RootNamespace>DamianH.Http.ForwardProxy.Conformance</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Http.ForwardProxy\Http.ForwardProxy.csproj" />
+    <InternalsVisibleTo Include="ForwardProxyConformance.Tests" />
+    <AssemblyMetadata Include="ConformanceDirectory" Value="$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/..'))" />
   </ItemGroup>
 
 </Project>

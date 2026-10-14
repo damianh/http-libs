@@ -1,7 +1,7 @@
 ---
 title: Forward proxy HTTP/1.1 conformance fixtures
 sidebarLabel: Conformance fixtures
-description: Run the HTTP Garden-based request-direction fixtures, read results, and update the regression baseline.
+description: Run the request-direction conformance fixtures, read results, and update the regression baseline.
 order: 7
 section: Forward Proxy
 ---
@@ -18,42 +18,57 @@ certification of RFC 9110 or RFC 9112 conformance: the corpus is repo-owned,
 covers selected requirements only, and some fixtures accept more than one
 compliant behaviour.
 
-## What HTTP Garden provides
+## How it works
+
+The harness is a C# console app, `forward-proxy/conformance/ForwardProxyConformance`.
+It starts an echo origin and the forward proxy in-process on free loopback
+ports, sends each fixture's raw bytes to the proxy over a socket, and parses
+what comes back. The proxy is an open HTTP/1.1 proxy that may reach loopback
+destinations on any port; never expose this configuration.
+
+The echo origin replies `200` with the bytes it received as the body, so the
+harness sees exactly what the proxy forwarded. Its behaviour matches HTTP
+Garden's `echo_server.py`: it reads until 100 ms pass without input, echoes,
+and closes the connection after an idle read.
+
+Forwarded bytes are parsed permissively so malformed output stays visible, then
+checked strictly: the request line must be `token SP target SP HTTP/1.x CRLF`,
+nothing may be left unparsed, the method and field names must be tokens and
+field values must not contain CR, LF or NUL (RFC 9110 §5.1, §5.5, §9.1).
+
+## HTTP Garden
 
 [HTTP Garden](https://github.com/narfindustries/http-garden) is a differential
 fuzzing toolkit: it runs many servers and reverse proxies in Docker and compares
 how they interpret the same bytes. It does not ship a fixture corpus, a
-pass/fail oracle or forward-proxy targets. This harness pins commit
-`b417e806c1b15e8ea0b9312f81a91fbdcbc7a83e`, clones it into the ignored
-`.http-garden/` directory (it is GPL-3.0 and is not vendored), and uses:
+pass/fail oracle or forward-proxy targets.
 
-- `tools/echo_server.py` as the origin. It replies `200` with the received bytes
-  as the body, so the harness sees exactly what the proxy forwarded.
-- `tools/http1.py` to parse proxy responses and forwarded requests, and
-  `HTTPRequest.is_valid()` to flag field names, values and methods that a
-  downstream parser could interpret differently.
-- `tools/util.py` socket helpers.
-
-Garden's Docker targets, REPL and Python package dependencies are not needed.
+`--garden-origin` replaces the built-in origin with Garden's
+`tools/echo_server.py` at pinned commit
+`b417e806c1b15e8ea0b9312f81a91fbdcbc7a83e`. The harness clones it into the
+ignored `.http-garden/` directory (it is GPL-3.0, so it is never vendored or
+ported) and checks that `tools/` matches the pin. CI gates both origins against
+the same baseline, so a third-party origin independently confirms the results.
 
 ## Running
 
-Requires .NET 10 SDK, Node.js 22+, Python 3.12+ and Git. From
-`forward-proxy/conformance`:
+Requires the .NET 10 SDK. `--garden-origin` also needs Git and Python 3.12+
+(standard library only; set `PYTHON` or pass `--python <path>`).
 
 ```bash
-./run-conformance.sh                        # full run and gate
-./run-conformance.sh --test-id host-missing # one fixture, diagnostic only
-./run-conformance.sh --update               # rewrite expected-results.json
+# Harness unit tests plus a full gated run with the built-in origin
+dotnet test --project forward-proxy/conformance/ForwardProxyConformance.Tests
+
+cd forward-proxy/conformance
+dotnet run --project ForwardProxyConformance -c Release                            # full run and gate
+dotnet run --project ForwardProxyConformance -c Release -- --test-id host-missing  # one fixture, diagnostic only
+dotnet run --project ForwardProxyConformance -c Release -- --update                # rewrite expected-results.json
+dotnet run --project ForwardProxyConformance -c Release -- --garden-origin         # gate using HTTP Garden's origin
 ```
 
-PowerShell: `.\run-conformance.ps1 [-Update] [-TestId <id>] [-Serve] [-Python <path>]`.
-
-The launcher builds `ConformanceProxy` (an open HTTP/1.1 proxy on loopback that
-may reach loopback destinations on any port; never expose it), starts the echo
-origin and proxy on free ports, waits for readiness, runs `garden_driver.py`,
-writes `results-full.json` and runs `compare-results.mjs`. Per-process logs are
-written as `full-*.log`.
+Runs write `results-full.json` (`results-garden-full.json` with
+`--garden-origin`) and proxy and origin logs. Exit codes: `0` no regressions,
+`1` regressions, missing fixtures or run failure, `2` usage error.
 
 ## Fixtures and outcomes
 
@@ -62,7 +77,7 @@ Each fixture in `fixtures.json` has an `id`, `reference`, raw `payload` (with
 
 | `expect` | Passes when |
 | --- | --- |
-| `forward` | The origin receives the expected number of requests (default 1), every check holds, no proxy error is returned, and the forwarded bytes have a strict request line, parse without leftovers and satisfy `is_valid()`. |
+| `forward` | The origin receives the expected number of requests (default 1), every check holds, no proxy error is returned, and the forwarded bytes have a strict request line, parse without leftovers and have valid method and field syntax. |
 | `reject` | Nothing reaches the origin and the proxy responds with a listed status (default any 4xx). |
 | `not-forwarded` | Nothing reaches the origin. |
 | `reject-or-forward` | Either `reject` or `forward` passes, for requirements that allow rejecting or repairing a message. |
@@ -93,11 +108,12 @@ same change.
 
 ## Exploring with the Garden REPL
 
-`./run-conformance.sh --serve` keeps the proxy and echo origin running and
-prints an entry to add to `.http-garden/external-services.yml`. With Garden's
-Python dependencies installed, its REPL can then transduce absolute-form
-payloads through the proxy and, with Garden origins running in Docker,
-`fanout` the forwarded bytes for differential comparison:
+`dotnet run --project ForwardProxyConformance -c Release -- --serve` keeps the
+proxy and origin running until Ctrl+C and prints an entry to add to
+`.http-garden/external-services.yml`. With Garden's Python dependencies
+installed, its REPL can then transduce absolute-form payloads through the proxy
+and, with Garden origins running in Docker, `fanout` the forwarded bytes for
+differential comparison:
 
 ```text
 garden> payload 'GET http://127.0.0.1:<origin-port>/ HTTP/1.1\r\nHost: a\r\n\r\n' | transduce dotnet_forward_proxy
@@ -113,5 +129,5 @@ garden> payload 'GET http://127.0.0.1:<origin-port>/ HTTP/1.1\r\nHost: a\r\n\r\n
   single write.
 - Kestrel parses requests before the proxy middleware runs, so several results
   reflect Kestrel behaviour.
-- HTTP Garden upstream supports x86-64 and AArch64 Linux. The harness uses only
-  its portable Python tools, but Windows runs are untested upstream.
+- HTTP Garden upstream supports x86-64 and AArch64 Linux. `--garden-origin`
+  uses only its portable echo server, but Windows runs are untested upstream.

@@ -1,5 +1,5 @@
 {
-  "$comment": "Repo-owned HTTP/1.1 forward-proxy fixtures. {origin} is replaced with the HTTP Garden echo origin's host:port. expect: forward | reject | not-forwarded | reject-or-forward. Every forwarded request must also satisfy HTTP Garden's HTTPRequest.is_valid() and parse without leftover bytes.",
+  "$comment": "Repo-owned HTTP/1.1 forward-proxy fixtures. {origin} is replaced with the echo origin's host:port. expect: forward | reject | not-forwarded | reject-or-forward. Every forwarded request must also have a strict request line, parse without leftover bytes, and have a token method and field names and field values without CR, LF or NUL.",
   "fixtures": [
     {
       "id": "target-absolute-form-get",
