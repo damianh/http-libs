@@ -196,6 +196,70 @@ public class TlsInterceptionTests
         requests.ShouldBe(0);
     }
 
+    [Theory]
+    [InlineData(false, "host")]
+    [InlineData(true, "host")]
+    [InlineData(false, "port")]
+    [InlineData(true, "port")]
+    [InlineData(false, "omitted-port")]
+    [InlineData(true, "omitted-port")]
+    [InlineData(false, "invalid")]
+    [InlineData(true, "invalid")]
+    [InlineData(false, "multiple")]
+    [InlineData(true, "multiple")]
+    public async Task RejectsHostChangingTransformsBeforeSending(bool intercepted, string change)
+    {
+        var requests = 0;
+        await using var origin = await OriginHost.StartAsync(tls: intercepted, handler: context =>
+        {
+            Interlocked.Increment(ref requests);
+            return context.Response.WriteAsync("unexpected", context.RequestAborted);
+        });
+        var changedHost = change switch
+        {
+            "host" => $"localhost:{origin.Port}",
+            "port" => $"127.0.0.1:{origin.Port % 65535 + 1}",
+            "omitted-port" => "127.0.0.1",
+            "invalid" => "127.0.0.1:not-a-port",
+            "multiple" => $"127.0.0.1:{origin.Port},localhost:{origin.Port}",
+            _ => throw new ArgumentOutOfRangeException(nameof(change)),
+        };
+        void ConfigureServices(IServiceCollection services) =>
+            services.AddSingleton<IForwardProxyRequestTransform>(new HostChangingTransform(changedHost));
+        await using var proxy = intercepted
+            ? await StartInterceptingProxyAsync(configureServices: ConfigureServices)
+            : await ProxyHost.StartAsync(configureServices: ConfigureServices);
+        using var client = intercepted ? CreateClient(proxy) : ConnectTunnelTests.CreateClient(proxy);
+
+        using var response = await client.GetAsync(origin.Uri, Ct);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.InternalServerError);
+        response.Headers.GetValues("Proxy-Status").ShouldBe(["forward-proxy; error=proxy_internal_error"]);
+        requests.ShouldBe(0);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task AllowsEquivalentHostTransforms(bool intercepted, bool removeHost)
+    {
+        await using var origin = await OriginHost.StartAsync(tls: intercepted);
+        var host = removeHost ? null : $"127.0.0.1.:{origin.Port}";
+        void ConfigureServices(IServiceCollection services) =>
+            services.AddSingleton<IForwardProxyRequestTransform>(new HostChangingTransform(host));
+        await using var proxy = intercepted
+            ? await StartInterceptingProxyAsync(configureServices: ConfigureServices)
+            : await ProxyHost.StartAsync(configureServices: ConfigureServices);
+        using var client = intercepted ? CreateClient(proxy) : ConnectTunnelTests.CreateClient(proxy);
+
+        using var response = await client.GetAsync(origin.Uri, Ct);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await response.Content.ReadAsStringAsync(Ct)).ShouldContain($"host={host ?? origin.Uri.Authority}");
+    }
+
     [Fact]
     public async Task StreamsServerSentEvents()
     {
@@ -603,6 +667,20 @@ public class TlsInterceptionTests
         public ValueTask TransformRequestAsync(HttpContext context, ForwardProxyDestination destination, HttpRequestMessage request, CancellationToken cancellationToken)
         {
             request.RequestUri = uri;
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class HostChangingTransform(string? host) : IForwardProxyRequestTransform
+    {
+        public ValueTask TransformRequestAsync(HttpContext context, ForwardProxyDestination destination, HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            request.Headers.Remove("Host");
+            if (host is not null)
+            {
+                request.Headers.TryAddWithoutValidation("Host", host.Split(','));
+            }
+
             return ValueTask.CompletedTask;
         }
     }

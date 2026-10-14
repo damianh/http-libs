@@ -21,7 +21,10 @@ public interface IForwardProxyRequestTransform
     /// <summary>Called before <paramref name="request"/> is sent to the destination.</summary>
     /// <param name="context">The client request. For intercepted tunnels, see <see cref="IForwardProxyInterceptionFeature"/>.</param>
     /// <param name="destination">The destination. Intercepted requests have <see cref="ForwardProxyRequestKind.Connect"/>.</param>
-    /// <param name="request">The outbound request. Changing its <see cref="HttpRequestMessage.RequestUri"/> fails the request with <c>500</c> and <c>proxy_internal_error</c>.</param>
+    /// <param name="request">
+    /// The outbound request. Changing its <see cref="HttpRequestMessage.RequestUri"/> or overriding <c>Host</c> with
+    /// a different normalized destination authority fails the request with <c>500</c> and <c>proxy_internal_error</c>.
+    /// </param>
     /// <param name="cancellationToken">Signals that the client aborted the request.</param>
     ValueTask TransformRequestAsync(HttpContext context, ForwardProxyDestination destination, HttpRequestMessage request, CancellationToken cancellationToken) =>
         ValueTask.CompletedTask;

@@ -122,8 +122,7 @@ internal sealed class ForwardProxyMiddleware(RequestDelegate next, ForwardProxyH
             return true;
         }
 
-        var authority = host.Port is null ? $"{host.Value}:443" : host.Value;
-        return AuthorityParser.TryParse(authority, out var name, out var port) && name == destination.Host && port == destination.Port;
+        return AuthorityParser.TryParse(host.Value, 443, out var name, out var port) && name == destination.Host && port == destination.Port;
     }
 
     /// <summary>

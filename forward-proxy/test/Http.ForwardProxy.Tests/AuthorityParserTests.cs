@@ -23,6 +23,31 @@ public class AuthorityParserTests
     }
 
     [Theory]
+    [InlineData("Example.COM.", 443, "example.com", 443)]
+    [InlineData("Example.COM.:80", 443, "example.com", 80)]
+    [InlineData("example.com", 80, "example.com", 80)]
+    [InlineData("[2001:0DB8:0:0:0:0:0:1]", 443, "2001:db8::1", 443)]
+    [InlineData("[2001:db8::1]:8443", 443, "2001:db8::1", 8443)]
+    public void ParsesAuthoritiesWithDefaultPorts(string authority, int defaultPort, string expectedHost, int expectedPort)
+    {
+        AuthorityParser.TryParse(authority, defaultPort, out var host, out var port).ShouldBeTrue();
+        host.ShouldBe(expectedHost);
+        port.ShouldBe(expectedPort);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("example.com:")]
+    [InlineData("example.com:not-a-port")]
+    [InlineData("example.com:65536")]
+    [InlineData("2001:db8::1")]
+    [InlineData("[not-an-ip]")]
+    [InlineData("example.com,other.example")]
+    [InlineData("user@example.com")]
+    public void RejectsInvalidAuthoritiesWithDefaultPorts(string authority) =>
+        AuthorityParser.TryParse(authority, 443, out _, out _).ShouldBeFalse();
+
+    [Theory]
     [InlineData("")]
     [InlineData("example.com")]
     [InlineData("example.com:")]

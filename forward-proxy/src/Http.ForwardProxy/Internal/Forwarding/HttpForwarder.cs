@@ -66,6 +66,14 @@ internal sealed class HttpForwarder(HttpMessageInvoker httpClient, ForwardProxyO
                 {
                     throw new InvalidOperationException("Request transforms must not change the destination URI.");
                 }
+
+                if (request.Headers.NonValidated.TryGetValues(HeaderNames.Host, out var hosts)
+                    && (hosts.Count != 1
+                        || !AuthorityParser.TryParse(hosts.ToString(), target.Scheme == Uri.UriSchemeHttps ? 443 : 80, out var transformedHost, out var transformedPort)
+                        || transformedHost != destination.Host || transformedPort != destination.Port))
+                {
+                    throw new InvalidOperationException("Request transforms must not change the destination authority.");
+                }
             }
 
             HttpResponseMessage response;

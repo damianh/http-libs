@@ -10,6 +10,13 @@ internal static class AuthorityParser
 {
     private const int MaxHostLength = 253;
 
+    /// <summary>Parses an authority, using <paramref name="defaultPort"/> when the port is omitted.</summary>
+    public static bool TryParse(string authority, int defaultPort, out string host, out int port)
+    {
+        var hasPort = authority.StartsWith('[') ? !authority.EndsWith(']') : authority.Contains(':');
+        return TryParse(hasPort ? authority : $"{authority}:{defaultPort}", out host, out port);
+    }
+
     /// <summary>Parses an authority-form target. The port is required.</summary>
     public static bool TryParse(string authority, out string host, out int port)
     {

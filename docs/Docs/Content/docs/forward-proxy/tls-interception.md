@@ -222,8 +222,10 @@ sealed class ApiKeyTransform(ISecretStore secrets) : IForwardProxyRequestTransfo
 ```
 
 An exception from a transform fails the request with `500`
-`proxy_internal_error`. Changing the outgoing request URI is rejected with the
-same error; transforms cannot reroute requests after destination policy checks.
+`proxy_internal_error`. Changing the outgoing request URI or overriding `Host`
+with a different normalized host or port is rejected with the same error;
+transforms cannot reroute requests after destination policy checks. Equivalent
+authorities, including omitted default ports, are allowed.
 
 ## Behaviour
 
