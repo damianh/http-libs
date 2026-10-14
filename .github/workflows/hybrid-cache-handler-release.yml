@@ -51,6 +51,8 @@ jobs:
 
   release:
     needs: select-package
+    permissions:
+      contents: write
     uses: ./.github/workflows/release-template.yml
     with:
       product: hybrid-cache-handler
