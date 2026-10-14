@@ -91,7 +91,7 @@ internal sealed class ForwardProxyHandler : IDisposable
         {
             if (_interceptor is not null
                 && context.RequestServices.GetService<IForwardProxyInterceptionSelector>() is { } selector
-                && await selector.ShouldInterceptAsync(context, destination, context.RequestAborted).ConfigureAwait(false))
+                && await ShouldInterceptAsync(selector, context, destination).ConfigureAwait(false))
             {
                 _metrics.Request(ForwardProxyRequestKind.Connect, Outcomes.Intercepted);
                 Log.TunnelIntercepted(_logger, host, port);
@@ -113,6 +113,26 @@ internal sealed class ForwardProxyHandler : IDisposable
         {
             _limiter.Release();
             throw;
+        }
+    }
+
+    private async ValueTask<bool> ShouldInterceptAsync(
+        IForwardProxyInterceptionSelector selector,
+        HttpContext context,
+        ForwardProxyDestination destination)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted);
+        timeout.CancelAfter(_options.ConnectTimeout);
+        try
+        {
+            return await selector.ShouldInterceptAsync(context, destination, timeout.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!context.RequestAborted.IsCancellationRequested)
+        {
+            throw new ProxyErrorException(new(
+                StatusCodes.Status504GatewayTimeout,
+                ProxyErrorTypes.ConnectionTimeout,
+                "Timed out selecting whether to intercept the tunnel."));
         }
     }
 

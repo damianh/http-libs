@@ -302,6 +302,30 @@ public class TlsInterceptionTests
     }
 
     [Fact]
+    public async Task CancelsAnInterceptionSelectorAfterConnectTimeout()
+    {
+        await using var origin = await OriginHost.StartAsync(tls: true);
+        var cancellation = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var proxy = await StartInterceptingProxyAsync(
+            configure: o =>
+            {
+                o.ConnectTimeout = TimeSpan.FromMilliseconds(200);
+                o.MaxConcurrentTunnels = 1;
+            },
+            configureServices: services => services.AddSingleton<IForwardProxyInterceptionSelector>(
+                new CancellationWaitingSelector(cancellation)));
+        using var client = CreateClient(proxy);
+
+        for (var i = 0; i < 2; i++)
+        {
+            var exception = await Should.ThrowAsync<HttpRequestException>(() => client.GetStringAsync(origin.Uri, Ct));
+            exception.StatusCode.ShouldBe(HttpStatusCode.GatewayTimeout);
+        }
+
+        await cancellation.Task.WaitAsync(Ct);
+    }
+
+    [Fact]
     public async Task TunnelsWhenNoSelectorIsRegistered()
     {
         await using var origin = await OriginHost.StartAsync(tls: true);
@@ -534,6 +558,23 @@ public class TlsInterceptionTests
     {
         public ValueTask<bool> ShouldInterceptAsync(HttpContext context, ForwardProxyDestination destination, CancellationToken cancellationToken) =>
             ValueTask.FromResult(select(context, destination));
+    }
+
+    private sealed class CancellationWaitingSelector(TaskCompletionSource cancellation) : IForwardProxyInterceptionSelector
+    {
+        public async ValueTask<bool> ShouldInterceptAsync(HttpContext context, ForwardProxyDestination destination, CancellationToken cancellationToken)
+        {
+            try
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+                return false;
+            }
+            catch (OperationCanceledException)
+            {
+                cancellation.TrySetResult();
+                throw;
+            }
+        }
     }
 
     private sealed class DelegateCertificateProvider(Func<ForwardProxyDestination, SslStreamCertificateContext?> certificates) : IForwardProxyCertificateProvider
