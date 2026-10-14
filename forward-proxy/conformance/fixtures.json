@@ -1,0 +1,425 @@
+{
+  "$comment": "Repo-owned HTTP/1.1 forward-proxy fixtures. {origin} is replaced with the echo origin's host:port. expect: forward | reject | not-forwarded | reject-or-forward. Every forwarded request must also have a strict request line, parse without leftover bytes, and have a token method and field names and field values without CR, LF or NUL.",
+  "fixtures": [
+    {
+      "id": "target-absolute-form-get",
+      "category": "request-target",
+      "reference": "RFC 9112 §3.2.2, §3.2.1",
+      "description": "Absolute-form GET is forwarded once in origin-form with the target's Host.",
+      "payload": "GET http://{origin}/a/b?c=d HTTP/1.1\r\nHost: {origin}\r\n\r\n",
+      "expect": "forward",
+      "checks": [
+        { "method": "GET" },
+        { "uri": "/a/b?c=d" },
+        { "version": "1.1" },
+        { "header": "host", "equals": "{origin}" }
+      ]
+    },
+    {
+      "id": "target-empty-path",
+      "category": "request-target",
+      "reference": "RFC 9112 §3.2.1",
+      "description": "An empty absolute-form path is forwarded as /.",
+      "payload": "GET http://{origin} HTTP/1.1\r\nHost: {origin}\r\n\r\n",
+      "expect": "forward",
+      "checks": [{ "uri": "/" }]
+    },
+    {
+      "id": "target-uppercase-scheme",
+      "category": "request-target",
+      "reference": "RFC 9110 §4.2.3",
+      "description": "The scheme is case-insensitive.",
+      "payload": "GET HTTP://{origin}/ HTTP/1.1\r\nHost: {origin}\r\n\r\n",
+      "expect": "forward",
+      "checks": [{ "uri": "/" }]
+    },
+    {
+      "id": "target-options-empty-path",
+      "category": "request-target",
+      "reference": "RFC 9112 §3.2.4",
+      "description": "OPTIONS with an empty path and no query is forwarded by the last proxy as asterisk-form (\"OPTIONS *\"); RFC 9112 \u00a73.2.4 makes this an explicit exception to the general origin-form \"/\" rule.",
+      "payload": "OPTIONS http://{origin} HTTP/1.1\r\nHost: {origin}\r\n\r\n",
+      "expect": "forward",
+      "checks": [{ "method": "OPTIONS" }, { "uri": "*" }]
+    },
+    {
+      "id": "target-origin-form-not-proxied",
+      "category": "request-target",
+      "reference": "RFC 9112 §3.2.1",
+      "description": "An origin-form request is addressed to the proxy itself; its Host must not select a destination.",
+      "payload": "GET / HTTP/1.1\r\nHost: {origin}\r\n\r\n",
+      "expect": "not-forwarded"
+    },
+    {
+      "id": "target-https-absolute-form",
+      "category": "request-target",
+      "reference": "Forward proxy policy (https:// requires CONNECT)",
+      "description": "Absolute-form https:// is rejected rather than forwarded in cleartext.",
+      "payload": "GET https://{origin}/ HTTP/1.1\r\nHost: {origin}\r\n\r\n",
+      "expect": "reject",
+      "status": [400]
+    },
+    {
+      "id": "target-userinfo",
+      "category": "request-target",
+      "reference": "RFC 9110 §4.2.4",
+      "description": "userinfo in an http target is treated as an error.",
+      "payload": "GET http://user:pass@{origin}/ HTTP/1.1\r\nHost: {origin}\r\n\r\n",
+      "expect": "reject",
+      "status": [400]
+    },
+    {
+      "id": "target-fragment",
+      "category": "request-target",
+      "reference": "RFC 9112 §3.2, RFC 9110 §4.2.5",
+      "description": "A fragment is not part of absolute-URI; reject or strip it.",
+      "payload": "GET http://{origin}/a#frag HTTP/1.1\r\nHost: {origin}\r\n\r\n",
+      "expect": "reject-or-forward",
+      "checks": [{ "uri": "/a" }]
+    },
+    {
+      "id": "target-whitespace",
+      "category": "request-target",
+      "reference": "RFC 9112 §3.2",
+      "description": "Whitespace inside the request-target is invalid.",
+      "payload": "GET http://{origin}/a b HTTP/1.1\r\nHost: {origin}\r\n\r\n",
+      "expect": "reject",
+      "status": [400]
+    },
+    {
+      "id": "host-mismatch-replaced",
+      "category": "host",
+      "reference": "RFC 9112 §3.2.2",
+      "description": "A proxy ignores the received Host and replaces it with the target URI's authority.",
+      "payload": "GET http://{origin}/ HTTP/1.1\r\nHost: attacker.example\r\n\r\n",
+      "expect": "forward",
+      "checks": [{ "header": "host", "equals": "{origin}" }, { "header": "host", "count": 1 }]
+    },
+    {
+      "id": "host-empty-replaced",
+      "category": "host",
+      "reference": "RFC 9112 §3.2.2",
+      "description": "An empty received Host is replaced with the target URI's authority.",
+      "payload": "GET http://{origin}/ HTTP/1.1\r\nHost:\r\n\r\n",
+      "expect": "forward",
+      "checks": [{ "header": "host", "equals": "{origin}" }]
+    },
+    {
+      "id": "host-missing",
+      "category": "host",
+      "reference": "RFC 9112 §3.2",
+      "description": "An HTTP/1.1 request without Host must be rejected with 400.",
+      "payload": "GET http://{origin}/ HTTP/1.1\r\n\r\n",
+      "expect": "reject",
+      "status": [400]
+    },
+    {
+      "id": "host-duplicate",
+      "category": "host",
+      "reference": "RFC 9112 §3.2",
+      "description": "More than one Host field must be rejected with 400.",
+      "payload": "GET http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\nHost: other.example\r\n\r\n",
+      "expect": "reject",
+      "status": [400]
+    },
+    {
+      "id": "version-http10-forwarded-as-11",
+      "category": "version",
+      "reference": "RFC 9110 §2.5",
+      "description": "Intermediaries send their own HTTP version in forwarded messages.",
+      "payload": "GET http://{origin}/ HTTP/1.0\r\nHost: {origin}\r\n\r\n",
+      "expect": "forward",
+      "checks": [{ "version": "1.1" }]
+    },
+    {
+      "id": "version-invalid",
+      "category": "version",
+      "reference": "RFC 9112 §2.3",
+      "description": "A malformed HTTP-version is rejected.",
+      "payload": "GET http://{origin}/ HTTP/1.1.1\r\nHost: {origin}\r\n\r\n",
+      "expect": "reject"
+    },
+    {
+      "id": "connection-option-removed",
+      "category": "hop-by-hop",
+      "reference": "RFC 9110 §7.6.1",
+      "description": "Fields named by Connection, and Connection itself, are removed before forwarding.",
+      "payload": "GET http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\nConnection: X-Hop\r\nX-Hop: secret\r\nX-End: kept\r\n\r\n",
+      "expect": "forward",
+      "checks": [
+        { "header": "x-hop", "absent": true },
+        { "header": "x-end", "equals": "kept" },
+        { "header": "connection", "notMatches": "(?i)x-hop" }
+      ]
+    },
+    {
+      "id": "hop-by-hop-keep-alive-removed",
+      "category": "hop-by-hop",
+      "reference": "RFC 9110 §7.6.1",
+      "description": "Keep-Alive is removed before forwarding.",
+      "payload": "GET http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\nKeep-Alive: timeout=5\r\n\r\n",
+      "expect": "forward",
+      "checks": [{ "header": "keep-alive", "absent": true }]
+    },
+    {
+      "id": "hop-by-hop-proxy-connection-removed",
+      "category": "hop-by-hop",
+      "reference": "RFC 9110 §7.6.1",
+      "description": "Proxy-Connection is removed before forwarding.",
+      "payload": "GET http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\nProxy-Connection: keep-alive\r\n\r\n",
+      "expect": "forward",
+      "checks": [{ "header": "proxy-connection", "absent": true }]
+    },
+    {
+      "id": "hop-by-hop-te-removed",
+      "category": "hop-by-hop",
+      "reference": "RFC 9110 §7.6.1, §10.1.4",
+      "description": "TE is hop-by-hop and is not forwarded (except trailers when listed in Connection by the proxy itself).",
+      "payload": "GET http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\nTE: gzip\r\nConnection: TE\r\n\r\n",
+      "expect": "forward",
+      "checks": [{ "header": "te", "notMatches": "(?i)gzip" }]
+    },
+    {
+      "id": "hop-by-hop-h2c-upgrade-not-forwarded",
+      "category": "hop-by-hop",
+      "reference": "RFC 9110 §7.8, RFC 9113 §3.1",
+      "description": "An h2c Upgrade (a known proxy-smuggling vector) is not forwarded to the origin.",
+      "payload": "GET http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\nConnection: Upgrade, HTTP2-Settings\r\nUpgrade: h2c\r\nHTTP2-Settings: AAMAAABkAARAAAAAAAIAAAAA\r\n\r\n",
+      "expect": "reject-or-forward",
+      "checks": [{ "header": "upgrade", "absent": true }, { "header": "http2-settings", "absent": true }]
+    },
+    {
+      "id": "via-added",
+      "category": "via",
+      "reference": "RFC 9110 §7.6.3",
+      "description": "A proxy sends Via in each forwarded message.",
+      "payload": "GET http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\n\r\n",
+      "expect": "forward",
+      "checks": [{ "header": "via", "matches": "^(HTTP/)?1\\.1 \\S+" }]
+    },
+    {
+      "id": "via-appended",
+      "category": "via",
+      "reference": "RFC 9110 §7.6.3",
+      "description": "A proxy appends to, rather than replaces, a received Via.",
+      "payload": "GET http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\nVia: 1.0 upstream-client\r\n\r\n",
+      "expect": "forward",
+      "checks": [
+        { "header": "via", "matches": "(^|,\\s*)1\\.0 upstream-client(\\s*,|$)" },
+        { "header": "via", "matches": "(^|,\\s*)(HTTP/)?1\\.1 \\S+" }
+      ]
+    },
+    {
+      "id": "max-forwards-zero-options",
+      "category": "max-forwards",
+      "reference": "RFC 9110 §7.6.2",
+      "description": "OPTIONS with Max-Forwards: 0 must not be forwarded; the proxy responds as the final recipient.",
+      "payload": "OPTIONS http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\nMax-Forwards: 0\r\n\r\n",
+      "expect": "not-forwarded",
+      "status": [200]
+    },
+    {
+      "id": "max-forwards-decremented",
+      "category": "max-forwards",
+      "reference": "RFC 9110 §7.6.2",
+      "description": "OPTIONS with Max-Forwards > 0 is forwarded with the value decremented.",
+      "payload": "OPTIONS http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\nMax-Forwards: 5\r\n\r\n",
+      "expect": "forward",
+      "checks": [{ "header": "max-forwards", "equals": "4" }]
+    },
+    {
+      "id": "framing-content-length-body",
+      "category": "framing",
+      "reference": "RFC 9112 §6.2",
+      "description": "A Content-Length body is forwarded intact.",
+      "payload": "POST http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\nContent-Length: 5\r\n\r\nhello",
+      "expect": "forward",
+      "checks": [{ "body": "hello" }]
+    },
+    {
+      "id": "framing-chunked-body",
+      "category": "framing",
+      "reference": "RFC 9112 §7.1",
+      "description": "A chunked body is forwarded with the same content.",
+      "payload": "POST http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nhello\r\n0\r\n\r\n",
+      "expect": "forward",
+      "checks": [{ "body": "hello" }]
+    },
+    {
+      "id": "framing-chunked-case-insensitive",
+      "category": "framing",
+      "reference": "RFC 9112 §7",
+      "description": "Transfer coding names are case-insensitive.",
+      "payload": "POST http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\nTransfer-Encoding: CHUNKED\r\n\r\n5\r\nhello\r\n0\r\n\r\n",
+      "expect": "forward",
+      "checks": [{ "body": "hello" }]
+    },
+    {
+      "id": "framing-cl-and-te",
+      "category": "framing",
+      "reference": "RFC 9112 §6.3 (3)",
+      "description": "With both Transfer-Encoding and Content-Length, chunked wins; reject, or forward without the received Content-Length and without a smuggled request.",
+      "payload": "POST http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\nContent-Length: 4\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nhello\r\n0\r\n\r\n",
+      "expect": "reject-or-forward",
+      "checks": [{ "body": "hello" }, { "header": "content-length", "notEquals": "4" }]
+    },
+    {
+      "id": "framing-te-not-chunked-final",
+      "category": "framing",
+      "reference": "RFC 9112 §6.3 (4)",
+      "description": "A request whose final transfer coding is not chunked must be rejected with 400.",
+      "payload": "POST http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\nTransfer-Encoding: chunked, gzip\r\n\r\n5\r\nhello\r\n0\r\n\r\n",
+      "expect": "reject",
+      "status": [400, 501]
+    },
+    {
+      "id": "framing-te-unknown",
+      "category": "framing",
+      "reference": "RFC 9112 §6.1",
+      "description": "An unknown transfer coding is not forwarded (400 or 501).",
+      "payload": "POST http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\nTransfer-Encoding: x-unknown\r\n\r\nhello",
+      "expect": "reject",
+      "status": [400, 501]
+    },
+    {
+      "id": "framing-te-in-http10",
+      "category": "framing",
+      "reference": "RFC 9112 §6.1",
+      "description": "Transfer-Encoding in an HTTP/1.0 message is treated as faulty framing.",
+      "payload": "POST http://{origin}/ HTTP/1.0\r\nHost: {origin}\r\nTransfer-Encoding: chunked\r\nContent-Length: 15\r\n\r\n5\r\nhello\r\n0\r\n\r\n",
+      "expect": "reject"
+    },
+    {
+      "id": "framing-duplicate-content-length-differs",
+      "category": "framing",
+      "reference": "RFC 9112 §6.3 (5)",
+      "description": "Differing Content-Length values are an unrecoverable error.",
+      "payload": "POST http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\nContent-Length: 3\r\nContent-Length: 5\r\n\r\nhello",
+      "expect": "reject",
+      "status": [400]
+    },
+    {
+      "id": "framing-content-length-list-identical",
+      "category": "framing",
+      "reference": "RFC 9110 §8.6",
+      "description": "Identical Content-Length list values may be rejected or collapsed to one value.",
+      "payload": "POST http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\nContent-Length: 5, 5\r\n\r\nhello",
+      "expect": "reject-or-forward",
+      "checks": [{ "body": "hello" }, { "header": "content-length", "equals": "5" }]
+    },
+    {
+      "id": "framing-content-length-plus-sign",
+      "category": "framing",
+      "reference": "RFC 9112 §6.3 (5), RFC 9110 §8.6",
+      "description": "Content-Length must be 1*DIGIT.",
+      "payload": "POST http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\nContent-Length: +5\r\n\r\nhello",
+      "expect": "reject",
+      "status": [400]
+    },
+    {
+      "id": "framing-content-length-hex",
+      "category": "framing",
+      "reference": "RFC 9112 §6.3 (5), RFC 9110 §8.6",
+      "description": "Content-Length must be decimal digits.",
+      "payload": "POST http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\nContent-Length: 0x5\r\n\r\nhello",
+      "expect": "reject",
+      "status": [400]
+    },
+    {
+      "id": "framing-chunk-size-hex-prefix",
+      "category": "framing",
+      "reference": "RFC 9112 §7.1",
+      "description": "chunk-size is 1*HEXDIG; a 0x prefix is invalid.",
+      "payload": "POST http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\nTransfer-Encoding: chunked\r\n\r\n0x5\r\nhello\r\n0\r\n\r\n",
+      "expect": "reject"
+    },
+    {
+      "id": "framing-chunk-size-overflow",
+      "category": "framing",
+      "reference": "RFC 9112 §7.1",
+      "description": "Overflowing chunk sizes are rejected.",
+      "payload": "POST http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\nTransfer-Encoding: chunked\r\n\r\n10000000000000005\r\nhello\r\n0\r\n\r\n",
+      "expect": "reject"
+    },
+    {
+      "id": "framing-chunk-bare-lf",
+      "category": "framing",
+      "reference": "RFC 9112 §7.1, erratum 7633",
+      "description": "Bare LF after chunk data is invalid.",
+      "payload": "POST http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nhello\n0\r\n\r\n",
+      "expect": "reject"
+    },
+    {
+      "id": "framing-pipelined-requests",
+      "category": "framing",
+      "reference": "RFC 9112 §9.3.2",
+      "description": "Pipelined requests are forwarded as two distinct requests in order.",
+      "payload": "POST http://{origin}/first HTTP/1.1\r\nHost: {origin}\r\nContent-Length: 0\r\n\r\nGET http://{origin}/second HTTP/1.1\r\nHost: {origin}\r\n\r\n",
+      "expect": "forward",
+      "checks": [{ "count": 2 }, { "request": 0, "uri": "/first" }, { "request": 1, "uri": "/second" }]
+    },
+    {
+      "id": "fields-space-before-colon",
+      "category": "fields",
+      "reference": "RFC 9112 §5.1",
+      "description": "Whitespace between field name and colon must be rejected with 400.",
+      "payload": "POST http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\nContent-Length : 5\r\n\r\nhello",
+      "expect": "reject",
+      "status": [400]
+    },
+    {
+      "id": "fields-obs-fold",
+      "category": "fields",
+      "reference": "RFC 9112 §5.2",
+      "description": "obs-fold in a request is rejected, or replaced with SP before forwarding.",
+      "payload": "GET http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\nX-Folded: a\r\n b\r\n\r\n",
+      "expect": "reject-or-forward",
+      "checks": [{ "header": "x-folded", "notMatches": "[\\r\\n]" }]
+    },
+    {
+      "id": "fields-leading-whitespace-line",
+      "category": "fields",
+      "reference": "RFC 9112 §2.2",
+      "description": "Whitespace between start-line and first field: reject, or consume the line without processing it.",
+      "payload": "GET http://{origin}/ HTTP/1.1\r\n X-Injected: 1\r\nHost: {origin}\r\n\r\n",
+      "expect": "reject-or-forward",
+      "checks": [{ "header": "x-injected", "absent": true }]
+    },
+    {
+      "id": "fields-bare-cr",
+      "category": "fields",
+      "reference": "RFC 9112 §2.2",
+      "description": "A bare CR is rejected, or replaced with SP before forwarding.",
+      "payload": "GET http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\nX-Cr: a\rb\r\n\r\n",
+      "expect": "reject-or-forward",
+      "checks": [{ "header": "x-cr", "notMatches": "\\r" }]
+    },
+    {
+      "id": "fields-nul-in-value",
+      "category": "fields",
+      "reference": "RFC 9110 §5.5",
+      "description": "NUL in a field value is rejected, or replaced with SP before forwarding.",
+      "payload": "GET http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\nX-Nul: a\u0000b\r\n\r\n",
+      "expect": "reject-or-forward",
+      "checks": [{ "header": "x-nul", "notMatches": "\\x00" }]
+    },
+    {
+      "id": "fields-invalid-name",
+      "category": "fields",
+      "reference": "RFC 9110 §5.1",
+      "description": "A field name that is not a token is not forwarded verbatim.",
+      "payload": "GET http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\nX(Bad): 1\r\n\r\n",
+      "expect": "reject-or-forward",
+      "checks": [{ "header": "x(bad)", "absent": true }]
+    },
+    {
+      "id": "fields-whitespace-only-name",
+      "category": "fields",
+      "reference": "RFC 9112 §5",
+      "description": "A field line without a name is rejected.",
+      "payload": "GET http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\n: value\r\n\r\n",
+      "expect": "reject",
+      "status": [400]
+    }
+  ]
+}

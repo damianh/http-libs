@@ -1,0 +1,61 @@
+name: forward-proxy/checks
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - '**'
+    paths:
+      - .github/workflows/forward-proxy-checks.yml
+      - forward-proxy/**
+      - Directory.Build.props
+      - global.json
+      - http-lib.slnx
+  pull_request:
+    paths:
+      - .github/workflows/forward-proxy-checks.yml
+      - forward-proxy/**
+      - Directory.Build.props
+      - global.json
+      - http-lib.slnx
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  conformance:
+    name: HTTP/1.1 conformance fixtures (HTTP Garden)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Setup Python (HTTP Garden origin)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Harness tests and conformance gate (built-in origin)
+        run: dotnet test --project forward-proxy/conformance/ForwardProxyConformance.Tests -c Release
+
+      - name: Conformance gate (HTTP Garden origin)
+        run: dotnet run --project forward-proxy/conformance/ForwardProxyConformance -c Release -- --garden-origin
+
+      - name: Upload conformance results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forward-proxy-conformance-results
+          path: |
+            forward-proxy/conformance/results-*.json
+            forward-proxy/conformance/*.log
+          if-no-files-found: ignore

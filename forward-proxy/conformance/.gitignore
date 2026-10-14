@@ -1,0 +1,3 @@
+.http-garden/
+results*.json
+*.log

@@ -25,6 +25,10 @@
     <Project Path="forward-proxy/samples/EstInterception/EstInterception.Proxy/EstInterception.Proxy.csproj" />
     <Project Path="forward-proxy/samples/EstInterception/EstInterception.ServiceDefaults/EstInterception.ServiceDefaults.csproj" />
   </Folder>
+  <Folder Name="/forward-proxy/conformance/">
+    <Project Path="forward-proxy/conformance/ForwardProxyConformance/ForwardProxyConformance.csproj" />
+    <Project Path="forward-proxy/conformance/ForwardProxyConformance.Tests/ForwardProxyConformance.Tests.csproj" />
+  </Folder>
   <Folder Name="/structured-field-values/">
   </Folder>
   <Folder Name="/structured-field-values/src/">
