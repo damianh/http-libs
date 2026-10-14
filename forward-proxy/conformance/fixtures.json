@@ -37,7 +37,7 @@
       "id": "target-options-empty-path",
       "category": "request-target",
       "reference": "RFC 9112 §3.2.4",
-      "description": "The last proxy forwards OPTIONS with an empty path as asterisk-form.",
+      "description": "OPTIONS with an empty path and no query is forwarded by the last proxy as asterisk-form (\"OPTIONS *\"); RFC 9112 \u00a73.2.4 makes this an explicit exception to the general origin-form \"/\" rule.",
       "payload": "OPTIONS http://{origin} HTTP/1.1\r\nHost: {origin}\r\n\r\n",
       "expect": "forward",
       "checks": [{ "method": "OPTIONS" }, { "uri": "*" }]
