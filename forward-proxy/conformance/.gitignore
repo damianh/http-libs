@@ -1,0 +1,4 @@
+.http-garden/
+results*.json
+*.log
+__pycache__/
