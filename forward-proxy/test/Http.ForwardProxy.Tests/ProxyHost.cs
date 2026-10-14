@@ -33,7 +33,8 @@ internal sealed class ProxyHost : IAsyncDisposable
     public static async Task<ProxyHost> StartAsync(
         Action<ForwardProxyOptions>? configure = null,
         Action<IServiceCollection>? configureServices = null,
-        bool tls = false)
+        bool tls = false,
+        Action<WebApplication>? configureApp = null)
     {
         var builder = WebApplication.CreateSlimBuilder();
         builder.Logging.SetMinimumLevel(LogLevel.Warning);
@@ -66,6 +67,7 @@ internal sealed class ProxyHost : IAsyncDisposable
         configureServices?.Invoke(builder.Services);
 
         var app = builder.Build();
+        configureApp?.Invoke(app);
         app.UseForwardProxy();
         app.MapGet("/health", () => "proxy-health");
         await app.StartAsync(TestContext.Current.CancellationToken);
@@ -74,6 +76,10 @@ internal sealed class ProxyHost : IAsyncDisposable
 
     public ValueTask DisposeAsync() => _app.DisposeAsync();
 
+    // Skips non-IP addresses, such as the TLS interception endpoint's.
     internal static int GetPort(WebApplication app) =>
-        new Uri(app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.First()).Port;
+        app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses
+            .Select(address => new Uri(address))
+            .First(uri => uri.HostNameType is UriHostNameType.IPv4 or UriHostNameType.IPv6)
+            .Port;
 }

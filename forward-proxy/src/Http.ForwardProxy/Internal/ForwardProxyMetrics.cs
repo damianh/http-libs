@@ -29,6 +29,10 @@ internal sealed class ForwardProxyMetrics
     public void Request(ForwardProxyRequestKind kind, string outcome) =>
         _requests.Add(1, new("forward_proxy.kind", kind == ForwardProxyRequestKind.Connect ? "connect" : "http"), new("forward_proxy.outcome", outcome));
 
+    /// <summary>Counts a request received inside an intercepted tunnel.</summary>
+    public void InterceptedRequest(string outcome) =>
+        _requests.Add(1, new("forward_proxy.kind", "intercepted"), new("forward_proxy.outcome", outcome));
+
     public void TunnelOpened() => _activeTunnels.Add(1);
 
     public void TunnelClosed(double seconds, long bytesUpstream, long bytesDownstream)

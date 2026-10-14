@@ -17,7 +17,7 @@ of **servers** and routes to a fixed set of backends.
 | | Forward proxy | Reverse proxy |
 |---|---|---|
 | Destination chosen by | Client (request target) | Proxy configuration |
-| `https://` traffic | Opaque `CONNECT` tunnel | Terminated TLS |
+| `https://` traffic | Opaque `CONNECT` tunnel, or [intercepted](../tls-interception/) | Terminated TLS |
 | Authentication | `Proxy-Authorization` / `407` | `Authorization` / `401` |
 | Main risk | SSRF and open-proxy abuse | Backend exposure |
 
@@ -46,6 +46,11 @@ HTTP/2 `CONNECT` needs TLS with ALPN (`h2`) on the listener. Extended `CONNECT`
 (WebSockets over HTTP/2, `:protocol`) is not intercepted. Absolute-form
 `https://` targets are rejected with `400`; clients must use `CONNECT`. HTTP/3
 `CONNECT` is not supported and returns `501`.
+
+`CONNECT` tunnels are opaque unless you enable
+[TLS interception](../tls-interception/), which decrypts selected tunnels so
+middleware can change the requests inside them, for example to inject
+credentials.
 
 ## Forwarding `http://` requests
 

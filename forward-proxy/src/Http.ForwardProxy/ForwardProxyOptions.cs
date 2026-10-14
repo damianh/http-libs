@@ -70,7 +70,8 @@ public sealed class ForwardProxyOptions
     public bool BlockNonPublicAddresses { get; set; } = true;
 
     /// <summary>
-    /// Time allowed to resolve and connect to a destination. Defaults to 10 seconds. Must be positive and at most
+    /// Time allowed for an interception selector to decide and for destination DNS resolution and connection attempts.
+    /// Each phase is bounded by this timeout. Defaults to 10 seconds. Must be positive and at most
     /// <see cref="int.MaxValue"/> milliseconds (about 24.8 days).
     /// </summary>
     public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(10);

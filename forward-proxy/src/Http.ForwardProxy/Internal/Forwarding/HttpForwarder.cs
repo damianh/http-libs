@@ -4,8 +4,8 @@
 // Adapted from YARP v2.3.0 (https://github.com/dotnet/yarp/blob/v2.3.0/src/ReverseProxy/Forwarder/HttpForwarder.cs).
 // Copyright (c) .NET Foundation and Contributors. Licensed under the MIT License; see THIRD-PARTY-NOTICES.txt.
 //
-// Reduced to what a forward proxy needs: HTTP/1.1 to the destination, no transforms, WebSocket upgrades only, and
-// failures reported as Proxy-Status errors.
+// Reduced to what a forward proxy needs: HTTP/1.1 to the destination, header transforms through
+// IForwardProxyRequestTransform, WebSocket upgrades only, and failures reported as Proxy-Status errors.
 
 using System.Net;
 using System.Net.Http;
@@ -13,11 +13,12 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Timeouts;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Net.Http.Headers;
 
 namespace DamianH.Http.ForwardProxy.Internal.Forwarding;
 
-/// <summary>Forwards an absolute-form request to its <c>http://</c> destination.</summary>
+/// <summary>Forwards a request to its <c>http://</c> or (intercepted) <c>https://</c> destination.</summary>
 internal sealed class HttpForwarder(HttpMessageInvoker httpClient, ForwardProxyOptions options) : IDisposable
 {
     private const string WebSocket = "websocket";
@@ -26,27 +27,58 @@ internal sealed class HttpForwarder(HttpMessageInvoker httpClient, ForwardProxyO
     private static readonly ProxyError DestinationTimeout = new(StatusCodes.Status504GatewayTimeout, ProxyErrorTypes.ConnectionTimeout, "Destination timed out.");
     private static readonly ProxyError ResponseIncomplete = new(StatusCodes.Status502BadGateway, ProxyErrorTypes.HttpResponseIncomplete, "Destination response was incomplete.");
     private static readonly ProxyError ClientAborted = new(StatusCodes.Status400BadRequest, ProxyErrorTypes.HttpRequestError, "Client aborted the request.");
+    private static readonly ProxyError TlsProtocolError = new(StatusCodes.Status502BadGateway, ProxyErrorTypes.TlsProtocolError, "TLS handshake with the destination failed.");
 
     public void Dispose() => httpClient.Dispose();
 
     /// <summary>Forwards the request.</summary>
     /// <param name="context">The client request.</param>
     /// <param name="target">The absolute destination URI.</param>
+    /// <param name="destination">The destination, passed to request transforms.</param>
     /// <param name="startTunnel">
     /// For a WebSocket upgrade (<see cref="IsWebSocketUpgrade"/>), starts tunnel telemetry once the destination accepts
     /// the upgrade; <see langword="null"/> for other requests.
     /// </param>
-    public async Task<ForwardingFailure?> SendAsync(HttpContext context, Uri target, Func<TunnelTelemetry>? startTunnel)
+    /// <remarks>An exception from a request transform propagates, so it is reported as a proxy internal error.</remarks>
+    public async Task<ForwardingFailure?> SendAsync(HttpContext context, Uri target, ForwardProxyDestination destination, Func<TunnelTelemetry>? startTunnel)
     {
         var activity = ActivityCancellationTokenSource.Rent(options.HttpActivityTimeout, context.RequestAborted);
         try
         {
             var isUpgrade = startTunnel is not null;
+            var transforms = context.RequestServices.GetServices<IForwardProxyRequestTransform>().ToArray();
             StreamCopyHttpContent? requestContent = null;
+            HttpRequestMessage request;
+            try
+            {
+                request = CreateRequest(context, target, isUpgrade, activity, out requestContent);
+            }
+            catch (Exception ex)
+            {
+                return await HandleRequestFailureAsync(context, requestContent, ex, activity).ConfigureAwait(false);
+            }
+
+            foreach (var transform in transforms)
+            {
+                await transform.TransformRequestAsync(context, destination, request, context.RequestAborted).ConfigureAwait(false);
+                if (request.RequestUri is not { IsAbsoluteUri: true } transformedUri
+                    || !string.Equals(transformedUri.AbsoluteUri, target.AbsoluteUri, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException("Request transforms must not change the destination URI.");
+                }
+
+                if (request.Headers.NonValidated.TryGetValues(HeaderNames.Host, out var hosts)
+                    && (hosts.Count != 1
+                        || !AuthorityParser.TryParse(hosts.ToString(), target.Scheme == Uri.UriSchemeHttps ? 443 : 80, out var transformedHost, out var transformedPort)
+                        || transformedHost != destination.Host || transformedPort != destination.Port))
+                {
+                    throw new InvalidOperationException("Request transforms must not change the destination authority.");
+                }
+            }
+
             HttpResponseMessage response;
             try
             {
-                var request = CreateRequest(context, target, isUpgrade, activity, out requestContent);
                 response = await httpClient.SendAsync(request, activity.Token).ConfigureAwait(false);
             }
             catch (Exception ex)
@@ -57,6 +89,19 @@ internal sealed class HttpForwarder(HttpMessageInvoker httpClient, ForwardProxyO
             using (response)
             {
                 activity.ResetTimeout();
+                try
+                {
+                    foreach (var transform in transforms)
+                    {
+                        await transform.TransformResponseAsync(context, destination, response, context.RequestAborted).ConfigureAwait(false);
+                    }
+                }
+                catch
+                {
+                    await CancelRequestBodyAsync(requestContent, activity).ConfigureAwait(false);
+                    throw;
+                }
+
                 try
                 {
                     CopyResponseHead(context, response);
@@ -71,6 +116,12 @@ internal sealed class HttpForwarder(HttpMessageInvoker httpClient, ForwardProxyO
                 if (isUpgrade && response.StatusCode == HttpStatusCode.SwitchingProtocols)
                 {
                     return await UpgradeAsync(context, response, activity, startTunnel!).ConfigureAwait(false);
+                }
+
+                // An event stream (such as MCP's Streamable HTTP) can be quiet for long periods, like a tunnel.
+                if (IsEventStream(response))
+                {
+                    activity.SetActivityTimeout(options.TunnelIdleTimeout);
                 }
 
                 (StreamCopyResult Result, Exception? Error, long Bytes) responseCopy;
@@ -253,6 +304,7 @@ internal sealed class HttpForwarder(HttpMessageInvoker httpClient, ForwardProxyO
         {
             OperationCanceledException => new("RequestTimedOut", DestinationTimeout, exception),
             HttpRequestException { HttpRequestError: HttpRequestError.InvalidResponse or HttpRequestError.ResponseEnded } => new("ResponseHeaders", ResponseIncomplete, exception),
+            HttpRequestException { HttpRequestError: HttpRequestError.SecureConnectionError } => new("Tls", TlsProtocolError, exception),
             _ => new("Request", DestinationUnavailable, exception),
         };
     }
@@ -281,6 +333,9 @@ internal sealed class HttpForwarder(HttpMessageInvoker httpClient, ForwardProxyO
     public static bool IsWebSocketUpgrade(HttpContext context) =>
         context.Features.Get<IHttpUpgradeFeature>()?.IsUpgradableRequest == true
         && string.Equals(context.Request.Headers.Upgrade.ToString(), WebSocket, StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsEventStream(HttpResponseMessage response) =>
+        string.Equals(response.Content.Headers.ContentType?.MediaType, "text/event-stream", StringComparison.OrdinalIgnoreCase);
 
     private static bool HasBody(HttpRequest request)
     {

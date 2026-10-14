@@ -42,4 +42,19 @@ internal static partial class Log
 
     [LoggerMessage(12, LogLevel.Error, "Handling {Method} proxy request on connection {ConnectionId} failed.")]
     public static partial void ProxyRequestFailed(ILogger logger, Exception exception, string method, string connectionId);
+
+    [LoggerMessage(13, LogLevel.Information, "Tunnel to {Host}:{Port} intercepted.")]
+    public static partial void TunnelIntercepted(ILogger logger, string host, int port);
+
+    [LoggerMessage(14, LogLevel.Warning, "No certificate is available to intercept {Host}:{Port}; the TLS handshake fails.")]
+    public static partial void InterceptionCertificateMissing(ILogger logger, string host, int port);
+
+    [LoggerMessage(15, LogLevel.Warning, "Getting the certificate to intercept {Host}:{Port} failed.")]
+    public static partial void InterceptionCertificateFailed(ILogger logger, Exception exception, string host, int port);
+
+    [LoggerMessage(16, LogLevel.Warning, "The TLS interception endpoint is not listening; the tunnel to {Host}:{Port} is closed.")]
+    public static partial void InterceptionEndpointUnavailable(ILogger logger, string host, int port);
+
+    [LoggerMessage(17, LogLevel.Information, "Intercepted request {Method} to {Host}:{Port} rejected: {StatusCode} {ErrorType}. {Reason}")]
+    public static partial void InterceptedRequestRejected(ILogger logger, string method, string host, int port, int statusCode, string errorType, string reason);
 }
