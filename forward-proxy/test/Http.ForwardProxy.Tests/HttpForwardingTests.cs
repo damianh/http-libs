@@ -77,8 +77,77 @@ public class HttpForwardingTests
         using var socket = await RawProxy.ConnectAsync(proxy.Port);
 
         await RawProxy.SendAsync(socket, "GET https://example.com/ HTTP/1.1\r\nHost: example.com\r\n\r\n");
+        var response = await RawProxy.ReadResponseAsync(socket);
 
-        (await RawProxy.ReadResponseAsync(socket)).StatusCode.ShouldBe(400);
+        response.StatusCode.ShouldBe(400);
+        response.Header("Proxy-Status").ShouldBe("forward-proxy; error=http_request_error");
+    }
+
+    [Theory]
+    [InlineData("1.0")]
+    [InlineData("1.1")]
+    public async Task AppendsToReceivedViaHeaders(string version)
+    {
+        await using var origin = await StartOriginAsync(context =>
+        {
+            context.Response.Headers.Via = "1.1 origin-gateway";
+            return context.Response.WriteAsync($"via=[{context.Request.Headers.Via}]\n", context.RequestAborted);
+        });
+        await using var proxy = await ProxyHost.StartAsync();
+        using var socket = await RawProxy.ConnectAsync(proxy.Port);
+        var port = ProxyHost.GetPort(origin);
+
+        await RawProxy.SendAsync(socket, $"GET http://127.0.0.1:{port}/ HTTP/{version}\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\nVia: 1.1 client-gateway\r\n\r\n");
+        var response = await RawProxy.ReadResponseAsync(socket);
+        var body = await RawProxy.ReadToEndAsync(socket, response.Body);
+
+        response.StatusCode.ShouldBe(200);
+        body.ShouldContain($"via=[1.1 client-gateway, {version} forward-proxy]\n");
+        response.Header("Via").ShouldBe("1.1 origin-gateway, 1.1 forward-proxy");
+    }
+
+    [Fact]
+    public async Task DoesNotForwardHopByHopRequestHeaders()
+    {
+        await using var origin = await StartOriginAsync(context =>
+        {
+            var headers = context.Request.Headers;
+            return context.Response.WriteAsync(
+                $"keep-alive=[{headers.KeepAlive}]\nte=[{headers.TE}]\nproxy-connection=[{headers["Proxy-Connection"]}]\nhttp2-settings=[{headers["HTTP2-Settings"]}]\n",
+                context.RequestAborted);
+        });
+        await using var proxy = await ProxyHost.StartAsync();
+        using var socket = await RawProxy.ConnectAsync(proxy.Port);
+        var port = ProxyHost.GetPort(origin);
+
+        await RawProxy.SendAsync(socket, $"GET http://127.0.0.1:{port}/ HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\nKeep-Alive: timeout=5\r\nTE: trailers\r\nProxy-Connection: keep-alive\r\nHTTP2-Settings: AAMAAABkAARAAAAAAAIAAAAA\r\n\r\n");
+        var response = await RawProxy.ReadResponseAsync(socket);
+        var body = await RawProxy.ReadToEndAsync(socket, response.Body);
+
+        response.StatusCode.ShouldBe(200);
+        body.ShouldContain("keep-alive=[]\nte=[]\nproxy-connection=[]\nhttp2-settings=[]\n");
+    }
+
+    [Fact]
+    public async Task DoesNotForwardContentLengthWithTransferEncoding()
+    {
+        await using var origin = await StartOriginAsync(async context =>
+        {
+            using var reader = new StreamReader(context.Request.Body);
+            var requestBody = await reader.ReadToEndAsync(context.RequestAborted);
+            await context.Response.WriteAsync($"content-length=[{context.Request.Headers.ContentLength}]\nbody={requestBody}\n", context.RequestAborted);
+        });
+        await using var proxy = await ProxyHost.StartAsync();
+        using var socket = await RawProxy.ConnectAsync(proxy.Port);
+        var port = ProxyHost.GetPort(origin);
+
+        await RawProxy.SendAsync(socket, $"POST http://127.0.0.1:{port}/ HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\nContent-Length: 100\r\nTransfer-Encoding: chunked\r\n\r\n3\r\npay\r\n0\r\n\r\n");
+        var response = await RawProxy.ReadResponseAsync(socket);
+        var body = await RawProxy.ReadToEndAsync(socket, response.Body);
+
+        response.StatusCode.ShouldBe(200);
+        body.ShouldContain("content-length=[]\n");
+        body.ShouldContain("body=pay\n");
     }
 
     [Fact]
@@ -95,6 +164,45 @@ public class HttpForwardingTests
 
         ((int)response.StatusCode).ShouldBe(502);
         response.Headers.GetValues("Proxy-Status").ShouldBe(["forward-proxy; error=connection_refused"]);
+    }
+
+    [Fact]
+    public async Task ReportsInvalidOriginResponsesAsIncomplete()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        await using var proxy = await ProxyHost.StartAsync();
+        using var client = ConnectTunnelTests.CreateClient(proxy);
+        var responseTask = client.GetAsync($"http://127.0.0.1:{port}/", TestContext.Current.CancellationToken);
+        using (var originSocket = await listener.AcceptSocketAsync(TestContext.Current.CancellationToken))
+        {
+            await ReadHeadAsync(originSocket);
+            await RawProxy.SendAsync(originSocket, "NOT-HTTP\r\n\r\n");
+        }
+
+        using var response = await responseTask;
+
+        ((int)response.StatusCode).ShouldBe(502);
+        response.Headers.GetValues("Proxy-Status").ShouldBe(["forward-proxy; error=http_response_incomplete"]);
+    }
+
+    [Fact]
+    public async Task ReportsOriginsThatDoNotRespondAsTimedOut()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        await using var proxy = await ProxyHost.StartAsync(o => o.HttpActivityTimeout = TimeSpan.FromMilliseconds(200));
+        using var client = ConnectTunnelTests.CreateClient(proxy);
+        var responseTask = client.GetAsync($"http://127.0.0.1:{port}/", TestContext.Current.CancellationToken);
+        using var originSocket = await listener.AcceptSocketAsync(TestContext.Current.CancellationToken);
+        await ReadHeadAsync(originSocket);
+
+        using var response = await responseTask;
+
+        ((int)response.StatusCode).ShouldBe(504);
+        response.Headers.GetValues("Proxy-Status").ShouldBe(["forward-proxy; error=connection_timeout"]);
     }
 
     [Fact]
