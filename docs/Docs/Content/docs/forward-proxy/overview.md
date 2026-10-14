@@ -67,6 +67,13 @@ Hop-by-hop headers are removed, including headers the client names in
 also reads the request head as received to find the other names. That needs
 `ListenOptions.UseForwardProxy()` on the listener.
 
+For `TRACE` and `OPTIONS`, a valid `Max-Forwards` value is decremented before
+the request is forwarded. At `Max-Forwards: 0` the proxy answers without
+contacting the destination: `OPTIONS` gets an empty `200`, and `TRACE` gets
+`405` (the proxy never echoes a request, which could expose credentials to
+cross-site tracing). An invalid value is forwarded unchanged. Other methods
+and requests inside intercepted tunnels are not affected.
+
 ## Hosting
 
 ```csharp
