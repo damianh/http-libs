@@ -430,6 +430,25 @@ public class TlsInterceptionTests
     }
 
     [Fact]
+    public async Task RejectsExtendedConnectInsideTheTunnel()
+    {
+        await using var origin = await OriginHost.StartAsync(tls: true);
+        await using var proxy = await StartInterceptingProxyAsync();
+        using var client = CreateClient(proxy, version: HttpVersion.Version20);
+        using var request = new HttpRequestMessage(HttpMethod.Connect, new Uri(origin.Uri, "/chat"))
+        {
+            Version = HttpVersion.Version20,
+            VersionPolicy = HttpVersionPolicy.RequestVersionExact,
+        };
+        request.Headers.Protocol = "websocket";
+
+        using var response = await client.SendAsync(request, Ct);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        response.Headers.GetValues("Proxy-Status").ShouldBe(["forward-proxy; error=http_request_error"]);
+    }
+
+    [Fact]
     public async Task RejectsUntrustedDestinationCertificates()
     {
         await using var origin = await OriginHost.StartAsync(tls: true);

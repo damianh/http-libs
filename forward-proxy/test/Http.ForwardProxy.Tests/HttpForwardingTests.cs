@@ -204,23 +204,105 @@ public class HttpForwardingTests
     [Fact]
     public async Task DoesNotForwardContentLengthWithTransferEncoding()
     {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+
+        // Kestrel drops Content-Length when Transfer-Encoding is present. Restore it, as a server that keeps both
+        // fields would, so the proxy's own check is what removes it.
+        await using var proxy = await ProxyHost.StartAsync(configureApp: app => app.Use((context, next) =>
+        {
+            context.Request.Headers.ContentLength = 100;
+            return next(context);
+        }));
+        using var socket = await RawProxy.ConnectAsync(proxy.Port);
+
+        await RawProxy.SendAsync(socket, $"POST http://127.0.0.1:{port}/ HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\nContent-Length: 100\r\nTransfer-Encoding: chunked\r\n\r\n3\r\npay\r\n0\r\n\r\n");
+        using var originSocket = await listener.AcceptSocketAsync(TestContext.Current.CancellationToken);
+        var originRequest = await ReadHeadAsync(originSocket);
+        var bodyStart = originRequest.IndexOf("\r\n\r\n", StringComparison.Ordinal) + 4;
+        while (!originRequest[bodyStart..].EndsWith("0\r\n\r\n", StringComparison.Ordinal))
+        {
+            originRequest = await RawProxy.ReadExactlyAsync(originSocket, originRequest.Length + 1, originRequest);
+        }
+
+        await RawProxy.SendAsync(originSocket, "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok");
+        var response = await RawProxy.ReadResponseAsync(socket);
+        var head = originRequest[..bodyStart];
+
+        response.StatusCode.ShouldBe(200);
+        // Kestrel keeps the dropped value as X-Content-Length, an ordinary end-to-end field.
+        head.Split("\r\n").ShouldNotContain(line => line.StartsWith("Content-Length:", StringComparison.OrdinalIgnoreCase));
+        head.ShouldContain("\r\nTransfer-Encoding: chunked");
+        originRequest[bodyStart..].ShouldBe("3\r\npay\r\n0\r\n\r\n");
+    }
+
+    [Fact]
+    public async Task DoesNotAddContentLengthToNoContentResponses()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        await using var proxy = await ProxyHost.StartAsync();
+        using var socket = await RawProxy.ConnectAsync(proxy.Port);
+
+        await RawProxy.SendAsync(socket, $"GET http://127.0.0.1:{port}/ HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\n\r\n");
+        using var originSocket = await listener.AcceptSocketAsync(TestContext.Current.CancellationToken);
+        await ReadHeadAsync(originSocket);
+        await RawProxy.SendAsync(originSocket, "HTTP/1.1 204 No Content\r\nX-Origin: 1\r\n\r\n");
+        var response = await RawProxy.ReadResponseAsync(socket);
+
+        response.StatusLine.ShouldBe("HTTP/1.1 204 No Content");
+        response.Header("X-Origin").ShouldBe("1");
+        response.Headers.Contains("Content-Length").ShouldBeFalse();
+        response.Headers.Contains("Transfer-Encoding").ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task DoesNotForwardResponseContentLengthWithTransferEncoding()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        await using var proxy = await ProxyHost.StartAsync();
+        using var socket = await RawProxy.ConnectAsync(proxy.Port);
+
+        await RawProxy.SendAsync(socket, $"GET http://127.0.0.1:{port}/ HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\n\r\n");
+        using var originSocket = await listener.AcceptSocketAsync(TestContext.Current.CancellationToken);
+        await ReadHeadAsync(originSocket);
+        await RawProxy.SendAsync(originSocket, "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nContent-Length: 100\r\n\r\n7\r\npayload\r\n0\r\n\r\n");
+        var response = await RawProxy.ReadResponseAsync(socket);
+        var body = await RawProxy.ReadBodyAsync(socket, response);
+
+        response.StatusCode.ShouldBe(200);
+        response.Headers.Contains("Content-Length").ShouldBeFalse();
+        response.Header("Transfer-Encoding").ShouldBe("chunked");
+        body.ShouldBe("payload");
+    }
+
+    [Fact]
+    public async Task ForwardsExpectContinue()
+    {
         await using var origin = await StartOriginAsync(async context =>
         {
             using var reader = new StreamReader(context.Request.Body);
             var requestBody = await reader.ReadToEndAsync(context.RequestAborted);
-            await context.Response.WriteAsync($"content-length=[{context.Request.Headers.ContentLength}]\nbody={requestBody}\n", context.RequestAborted);
+            await context.Response.WriteAsync($"expect=[{context.Request.Headers.Expect}]\nbody={requestBody}\n", context.RequestAborted);
         });
         await using var proxy = await ProxyHost.StartAsync();
         using var socket = await RawProxy.ConnectAsync(proxy.Port);
         var port = ProxyHost.GetPort(origin);
 
-        await RawProxy.SendAsync(socket, $"POST http://127.0.0.1:{port}/ HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\nContent-Length: 100\r\nTransfer-Encoding: chunked\r\n\r\n3\r\npay\r\n0\r\n\r\n");
+        await RawProxy.SendAsync(socket, $"POST http://127.0.0.1:{port}/ HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\nExpect: 100-continue\r\nContent-Length: 7\r\n\r\n");
+        var interim = await RawProxy.ReadResponseAsync(socket);
+        await RawProxy.SendAsync(socket, "payload");
         var response = await RawProxy.ReadResponseAsync(socket);
         var body = await RawProxy.ReadToEndAsync(socket, response.Body);
 
+        interim.StatusLine.ShouldBe("HTTP/1.1 100 Continue");
         response.StatusCode.ShouldBe(200);
-        body.ShouldContain("content-length=[]\n");
-        body.ShouldContain("body=pay\n");
+        body.ShouldContain("expect=[100-continue]\n");
+        body.ShouldContain("body=payload\n");
     }
 
     [Fact]
@@ -258,6 +340,27 @@ public class HttpForwardingTests
 
         ((int)response.StatusCode).ShouldBe(502);
         response.Headers.GetValues("Proxy-Status").ShouldBe(["forward-proxy; error=http_response_incomplete"]);
+    }
+
+    [Fact]
+    public async Task ReportsResetOriginConnectionsAsUnavailable()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        await using var proxy = await ProxyHost.StartAsync();
+        using var client = ConnectTunnelTests.CreateClient(proxy);
+        var responseTask = client.GetAsync($"http://127.0.0.1:{port}/", TestContext.Current.CancellationToken);
+        using (var originSocket = await listener.AcceptSocketAsync(TestContext.Current.CancellationToken))
+        {
+            await ReadHeadAsync(originSocket);
+            originSocket.LingerState = new LingerOption(true, 0);
+        }
+
+        using var response = await responseTask;
+
+        ((int)response.StatusCode).ShouldBe(502);
+        response.Headers.GetValues("Proxy-Status").ShouldBe(["forward-proxy; error=destination_unavailable"]);
     }
 
     [Fact]
@@ -639,7 +742,7 @@ public class HttpForwardingTests
         return app;
     }
 
-    private static async Task ReadHeadAsync(Socket socket)
+    private static async Task<string> ReadHeadAsync(Socket socket)
     {
         var bytes = new byte[4096];
         var head = new StringBuilder();
@@ -655,5 +758,7 @@ public class HttpForwardingTests
 
             head.Append(Encoding.ASCII.GetString(bytes, 0, read));
         }
+
+        return head.ToString();
     }
 }
