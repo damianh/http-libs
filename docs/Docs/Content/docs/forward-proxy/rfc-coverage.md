@@ -1,7 +1,7 @@
 ---
 title: Forward proxy RFC coverage
 sidebarLabel: RFC coverage
-description: Which HTTP RFC requirements the forward proxy tests cover, and the known gaps.
+description: Which HTTP RFC requirements the forward proxy tests cover.
 order: 7
 section: Forward Proxy
 ---
@@ -25,7 +25,7 @@ or renaming a protocol test.
 | §7.6.3 | Add `Via` with the received protocol version, append to existing values, on requests and responses | `HttpForwardingTests.ForwardsAbsoluteFormRequests`, `AppendsToReceivedViaHeaders`, `ForwardsWebSocketUpgrades`, `UsesTheConfiguredProxyNameInVia` |
 | §7.6.3 | Reject a request whose `Via` shows it already passed through this proxy (loop); forward other proxies' entries | `HttpForwardingTests.RejectsForwardingLoopsWithoutContactingTheOrigin`, `ForwardsWhenViaNamesOtherProxies`, `ForwardsLoopsWhenDetectionIsDisabled`; `ViaHeaderTests.*` |
 | §7.8 | Forward `Upgrade` (WebSocket only) and relay after `101` | `HttpForwardingTests.ForwardsWebSocketUpgrades`, `StripsMixedConnectionOptionsAfterARejectedUpgrade`; `TlsInterceptionTests.RelaysWebSocketsInsideTheTunnel` |
-| §8.6 | Do not add `Content-Length` to a `204` response | `HttpForwardingTests.DoesNotAddContentLengthToNoContentResponses` |
+| §8.6 | No `Content-Length` on `1xx` or `204` responses: the `Content-Length: 0` that `HttpClient` adds to `1xx`, `204` and `205` responses is not relayed (Kestrel frames `205` itself, RFC 9110 §15.3.6); other statuses keep it | `ForwardingHeadersTests.RemovesZeroContentLengthFromBodylessResponses`, `KeepsZeroContentLengthOnResponsesThatCanHaveABody`; end to end: `HttpForwardingTests.DoesNotAddContentLengthToNoContentResponses` |
 | §10.1.1 | Forward `Expect: 100-continue`; send the request body after the interim `100` | `HttpForwardingTests.ForwardsExpectContinue` |
 | §6.6.2 | Do not advertise trailer fields that are not forwarded | `HttpForwardingTests.DoesNotAdvertiseRequestTrailersItDrops`, `DoesNotAdvertiseResponseTrailersItDrops` |
 | §9.3.6 | `CONNECT` uses authority-form with a port; reject content; `2xx` switches to a tunnel; restrict ports | `ConnectTunnelTests.TunnelsBytesIncludingEarlyDataAndPropagatesHalfClose`, `RejectsMalformedRequests`, `BlocksDisallowedPorts`; `ConnectRequestParserTests.RejectsMalformedRequests`, `AllowsZeroContentLength`; `AuthorityParserTests.*`; `DestinationPolicyTests.DefaultPortsAllow443ForConnectAnd80ForHttp` |
@@ -33,6 +33,7 @@ or renaming a protocol test.
 | §11.7.1, §15.5.8 | Challenge with `407` and `Proxy-Authenticate` | `AuthenticationTests.ChallengesConnectWithoutCredentials`, `UnauthenticatedHttpRequestsAreChallenged`, `TranslatesOriginStyleChallenges` |
 | §11.7.2 | Consume `Proxy-Authorization`; do not forward it | `HttpForwardingTests.ForwardsAbsoluteFormRequests`, `AuthenticationTests.HttpClientAuthenticatesForConnectAndHttp` |
 | §15.5.20 | `421` when a request in an intercepted tunnel targets another host | `TlsInterceptionTests.RejectsRequestsForAnotherHost` |
+| §15.6.2 | `501` for a `CONNECT` the proxy cannot tunnel: HTTP/3, or HTTP/1.1 after another request on the connection | `ForwardProxyMiddlewareTests.RejectsHttp3ConnectAsNotImplemented`, `ConnectTunnelTests.ConnectAfterAnotherRequestIsNotImplemented` |
 | §15.6.3 | `502` when the destination fails | `HttpForwardingTests.ReportsUnreachableOrigins`, `ReportsInvalidOriginResponsesAsIncomplete`, `ReportsResetOriginConnectionsAsUnavailable`; `ConnectTunnelTests.ReportsRefusedConnections`, `ReportsUnresolvableHosts`, `ReportsUnroutableDestinations` |
 | §15.6.4 | `503` when the proxy is at capacity | `ConnectTunnelTests.LimitsConcurrentTunnels`, `HttpForwardingTests.WebSocketUpgradesRespectTheTunnelLimit` |
 | §15.6.5 | `504` when the destination does not respond in time | `HttpForwardingTests.ReportsOriginsThatDoNotRespondAsTimedOut`, `TlsInterceptionTests.CancelsAnInterceptionSelectorAfterConnectTimeout` |
@@ -79,9 +80,10 @@ curl is not available.
 | `destination_ip_prohibited` | `ConnectTunnelTests.BlocksLoopbackByDefault`, `HttpForwardingTests.DoesNotRouteAbsoluteFormRequestsToTheProxyApplication`, `Http2ConnectTests.ReportsDeniedTunnelsOverHttp2`, `DestinationPolicyTests.NonPublicIpLiteralsFailFast` |
 | `http_request_denied` | `ConnectTunnelTests.BlocksDisallowedPorts`, `CustomFiltersCanDenyDestinations`; `HttpForwardingTests.RejectsDisallowedHttpPorts`, `RejectsForwardingLoopsWithoutContactingTheOrigin`; `TlsInterceptionTests.RejectsRequestsForAnotherHost` |
 | `http_request_error` | `HttpForwardingTests.RejectsAbsoluteFormHttpsTargets`, `TlsInterceptionTests.RejectsExtendedConnectInsideTheTunnel` |
-| `dns_error` | `ConnectTunnelTests.ReportsUnresolvableHosts` |
+| `dns_error` | `ConnectTunnelTests.ReportsUnresolvableHosts`, `ProxyDialerTests.ReportsNamesWithoutAddressesAsDnsError` |
+| `dns_timeout` | `ProxyDialerTests.ReportsSlowNameResolutionAsDnsTimeout` |
 | `destination_ip_unroutable` | `ConnectTunnelTests.ReportsUnroutableDestinations` (Linux only) |
-| `destination_unavailable` | `HttpForwardingTests.ReportsResetOriginConnectionsAsUnavailable` |
+| `destination_unavailable` | `HttpForwardingTests.ReportsResetOriginConnectionsAsUnavailable`; `CONNECT` dialer mapping: `ProxyDialerTests.MapsConnectFailuresToProxyStatusErrors` |
 | `connection_refused` | `ConnectTunnelTests.ReportsRefusedConnections`, `HttpForwardingTests.ReportsUnreachableOrigins` |
 | `connection_limit_reached` | `ConnectTunnelTests.LimitsConcurrentTunnels` |
 | `connection_timeout` | `HttpForwardingTests.ReportsOriginsThatDoNotRespondAsTimedOut` |
@@ -94,18 +96,15 @@ The proxy name in each value is checked by `ConnectTunnelTests.BlocksLoopbackByD
 
 ## Gaps
 
-Implemented but not covered by a test:
+None known. A few rules are checked below the HTTP level because they cannot be
+produced or observed end to end:
 
-- `Proxy-Status` type `dns_timeout`: DNS resolution calls `Dns` directly with
-  no injectable resolver, so a resolution that is slower than the timeout
-  cannot be produced reliably.
-- `destination_unavailable` from the `CONNECT` dialer (socket errors other than
-  refused, unreachable or timed out): no seam to inject such an error. The
-  forwarding path is covered.
-- Removal of a `Content-Length: 0` that `HttpClient` adds to `1xx`, `204` and
-  `205` responses (RFC 9110 §8.6). Kestrel also drops `Content-Length` from
-  `204` responses and adds `Content-Length: 0` to `205` responses (RFC 9110
-  §15.3.6), so the proxy's check cannot be observed through Kestrel.
-  `DoesNotAddContentLengthToNoContentResponses` checks only the end result.
-- HTTP/3 `CONNECT` returning `501`: the test environments have no QUIC
-  support (`libmsquic`), so Kestrel cannot listen for HTTP/3.
+- `dns_timeout` and the `CONNECT` dialer's socket-error mapping use
+  `ProxyDialerTests`, which replaces the internal resolver or calls the mapping
+  directly; a slow DNS server or arbitrary socket errors cannot be produced
+  reliably.
+- `Content-Length` removal on bodyless responses uses `ForwardingHeadersTests`,
+  because Kestrel also normalizes `Content-Length` on `204` and `205` responses
+  and hides the proxy's own check.
+- HTTP/3 `CONNECT` uses `ForwardProxyMiddlewareTests`, because Kestrel needs
+  `libmsquic` to listen for HTTP/3 and the test environments do not have it.
