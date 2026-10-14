@@ -98,6 +98,10 @@ internal static partial class FixtureEvaluator
         {
             reasons.Add($"proxy responded {ConformanceJson.Quote(observed.ProxyResponses.Select(r => r.Status))}");
         }
+        if (observed.UnparsedResponse.Length > 0)
+        {
+            reasons.Add($"client received unparseable response bytes {ConformanceJson.Quote(observed.UnparsedResponse)}");
+        }
         if (requests.Count == 0)
         {
             reasons.Add("nothing was forwarded");

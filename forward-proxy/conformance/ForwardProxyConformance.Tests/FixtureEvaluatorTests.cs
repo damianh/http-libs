@@ -52,6 +52,17 @@ public class FixtureEvaluatorTests
         result.Reasons.ShouldBe(["proxy responded [400]", "nothing was forwarded"]);
     }
 
+    [Fact]
+    public void Forward_fails_on_unparsed_response_after_a_valid_echo()
+    {
+        var result = Evaluate(
+            Fixture(Expectations.Forward),
+            Echo($"GET / HTTP/1.1\r\nHost: {Origin}\r\n\r\n") + "HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nhi");
+
+        result.Outcome.ShouldBe(Outcomes.Fail);
+        result.Reasons.ShouldContain(r => r.StartsWith("client received unparseable response bytes", StringComparison.Ordinal));
+    }
+
     [Theory]
     [InlineData("HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n", Outcomes.Pass)]
     [InlineData("HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\n\r\n", Outcomes.Fail)]
