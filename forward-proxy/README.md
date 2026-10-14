@@ -73,3 +73,4 @@ it** and logs a warning at startup. Never expose an open proxy to the internet.
 - [Errors and diagnostics](https://damianh.github.io/http-libs/docs/forward-proxy/diagnostics/)
 - [TLS interception](https://damianh.github.io/http-libs/docs/forward-proxy/tls-interception/)
 - [Deployment safety](https://damianh.github.io/http-libs/docs/forward-proxy/deployment-safety/)
+- [RFC coverage](https://damianh.github.io/http-libs/docs/forward-proxy/rfc-coverage/)

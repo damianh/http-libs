@@ -97,6 +97,42 @@ public class ConnectTunnelTests
         response.Header("Proxy-Status").ShouldBe("forward-proxy; error=connection_refused");
     }
 
+    [Fact]
+    public async Task ReportsUnresolvableHosts()
+    {
+        await using var proxy = await ProxyHost.StartAsync();
+        using var socket = await RawProxy.ConnectAsync(proxy.Port);
+
+        // RFC 6761 §6.4: .invalid names never resolve.
+        await RawProxy.SendAsync(socket, "CONNECT unresolvable.invalid:443 HTTP/1.1\r\n\r\n");
+        var response = await RawProxy.ReadResponseAsync(socket);
+
+        response.StatusCode.ShouldBe(502);
+        response.Header("Proxy-Status").ShouldBe("forward-proxy; error=dns_error");
+    }
+
+    [Fact]
+    public async Task ReportsUnroutableDestinations()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            Assert.Skip("Relies on Linux failing TCP connects to multicast addresses with ENETUNREACH.");
+        }
+
+        await using var proxy = await ProxyHost.StartAsync(o =>
+        {
+            o.AllowedNetworks.Add(IPNetwork.Parse("224.0.0.0/4"));
+            o.BlockNonPublicAddresses = false;
+        });
+        using var socket = await RawProxy.ConnectAsync(proxy.Port);
+
+        await RawProxy.SendAsync(socket, "CONNECT 224.0.0.1:443 HTTP/1.1\r\n\r\n");
+        var response = await RawProxy.ReadResponseAsync(socket);
+
+        response.StatusCode.ShouldBe(502);
+        response.Header("Proxy-Status").ShouldBe("forward-proxy; error=destination_ip_unroutable");
+    }
+
     [Theory]
     [InlineData("CONNECT example.com HTTP/1.1\r\n\r\n", 400)]
     [InlineData("CONNECT example.com:443 HTTP/1.1\r\nContent-Length: 4\r\n\r\nbody", 400)]

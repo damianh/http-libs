@@ -153,6 +153,8 @@ internal sealed class ForwardProxyMiddleware(RequestDelegate next, ForwardProxyH
         }
     }
 
+    private const int Http2ConnectError = 0xa;
+
     private async Task TunnelAsync(HttpContext context, string target)
     {
         // A tunnel can legitimately be idle or carry unbounded data; the proxy's own idle timeout governs it.
@@ -181,6 +183,21 @@ internal sealed class ForwardProxyMiddleware(RequestDelegate next, ForwardProxyH
         context.Features.Get<IHttpResponseBodyFeature>()?.DisableBuffering();
         await context.Response.StartAsync(context.RequestAborted).ConfigureAwait(false);
         await context.Response.Body.FlushAsync(context.RequestAborted).ConfigureAwait(false);
-        await tunnel.RunAsync(context.Request.BodyReader, context.Response.BodyWriter, context.RequestAborted, context, context.RequestAborted, context.Abort).ConfigureAwait(false);
+        // RFC 9113 section 8.5: over HTTP/2, a TCP error on the destination connection resets the stream with
+        // CONNECT_ERROR, and an aborted stream closes the destination connection with RST.
+        var isHttp2 = HttpProtocol.IsHttp2(context.Request.Protocol);
+        var result = await tunnel.RunAsync(
+            context.Request.BodyReader,
+            context.Response.BodyWriter,
+            context.RequestAborted,
+            context,
+            context.RequestAborted,
+            context.Abort,
+            resetUpstreamOnClientAbort: isHttp2).ConfigureAwait(false);
+        if (isHttp2 && result.UpstreamFailed && !context.RequestAborted.IsCancellationRequested
+            && context.Features.Get<IHttpResetFeature>() is { } reset)
+        {
+            reset.Reset(Http2ConnectError);
+        }
     }
 }

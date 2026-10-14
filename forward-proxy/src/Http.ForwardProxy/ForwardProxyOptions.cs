@@ -104,6 +104,13 @@ public sealed class ForwardProxyOptions
     /// <summary>When <see langword="true"/> (default), forwarded HTTP requests and responses get a <c>Via</c> entry.</summary>
     public bool AddViaHeader { get; set; } = true;
 
+    /// <summary>
+    /// When <see langword="true"/> (default), a forwarded HTTP request whose <c>Via</c> already has an entry received by
+    /// <see cref="ProxyName"/> is a forwarding loop: it is rejected with <c>502</c> and a <c>Proxy-Status</c>
+    /// <c>http_request_denied</c> error without contacting the destination. <c>CONNECT</c> requests are not checked.
+    /// </summary>
+    public bool RejectForwardingLoops { get; set; } = true;
+
     /// <summary>When <see langword="true"/> (default), proxy-generated errors include an RFC 9209 <c>Proxy-Status</c> header.</summary>
     public bool AddProxyStatusHeader { get; set; } = true;
 }

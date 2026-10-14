@@ -11,7 +11,11 @@ internal static class TunnelPump
 {
     private const int ReadBufferSize = 16 * 1024;
 
-    public readonly record struct Result(long BytesUpstream, long BytesDownstream, bool IdleTimedOut);
+    /// <param name="BytesUpstream">Bytes relayed from the client to the destination.</param>
+    /// <param name="BytesDownstream">Bytes relayed from the destination to the client.</param>
+    /// <param name="IdleTimedOut">The tunnel was closed because it was idle.</param>
+    /// <param name="UpstreamFailed">The destination connection failed (for example, it was reset) rather than closing.</param>
+    public readonly record struct Result(long BytesUpstream, long BytesDownstream, bool IdleTimedOut, bool UpstreamFailed = false);
 
     /// <summary>
     /// Runs until the upstream closes, the client aborts, or the tunnel is idle for <paramref name="idleTimeout"/>.
@@ -43,7 +47,7 @@ internal static class TunnelPump
         }
 
         await Task.WhenAll(upTask, downTask).ConfigureAwait(false);
-        return new(Interlocked.Read(ref state.BytesUpstream), Interlocked.Read(ref state.BytesDownstream), state.IdleTimedOut);
+        return new(Interlocked.Read(ref state.BytesUpstream), Interlocked.Read(ref state.BytesDownstream), state.IdleTimedOut, state.UpstreamFailed);
     }
 
     /// <returns><see langword="true"/> when the client completed gracefully (half-close).</returns>
@@ -74,6 +78,7 @@ internal static class TunnelPump
         }
         catch (Exception ex) when (IsTunnelTermination(ex))
         {
+            RecordUpstreamFailure(ex, state, cancellationToken);
             return false;
         }
     }
@@ -105,6 +110,16 @@ internal static class TunnelPump
         }
         catch (Exception ex) when (IsTunnelTermination(ex))
         {
+            RecordUpstreamFailure(ex, state, cancellationToken);
+        }
+    }
+
+    // Only the upstream NetworkStream raises socket errors; client pipe failures surface as other exception types.
+    private static void RecordUpstreamFailure(Exception ex, State state, CancellationToken cancellationToken)
+    {
+        if (!cancellationToken.IsCancellationRequested && ex is SocketException or IOException { InnerException: SocketException })
+        {
+            state.UpstreamFailed = true;
         }
     }
 
@@ -117,5 +132,6 @@ internal static class TunnelPump
         public long BytesUpstream;
         public long BytesDownstream;
         public volatile bool IdleTimedOut;
+        public volatile bool UpstreamFailed;
     }
 }

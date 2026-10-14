@@ -28,6 +28,7 @@ Connection: close
 | 403 | `http_request_denied` | Port, host rule or `IForwardProxyDestinationFilter` denied |
 | 421 | `http_request_denied` | Intercepted request's `Host` does not match the `CONNECT` target |
 | 403 | `destination_ip_prohibited` | Target IP or every resolved address is blocked |
+| 502 | `http_request_denied` | Forwarding loop: the request's `Via` already has an entry received by `ProxyName` (`details="forwarding loop detected"`) |
 | 502 | `dns_error` | Name did not resolve |
 | 502 | `connection_refused` | Destination refused the connection |
 | 502 | `destination_ip_unroutable`, `destination_unavailable` | Network unreachable or other connect failure |
@@ -42,6 +43,23 @@ Connection: close
 and do not carry `Proxy-Status`. Set `AddProxyStatusHeader = false` to omit the
 header. Malformed HTTP/1.1 `CONNECT` heads get `400` (or `431` when too large)
 and the connection is closed.
+
+### Forwarding loops
+
+Forwarded `http://` and intercepted requests get a `Via` entry with
+`ProxyName` as the received-by pseudonym (set `AddViaHeader = false` to omit
+it). When a request arrives whose `Via` already contains an entry received by
+`ProxyName` (compared case-insensitively), it has looped back through this
+proxy: it gets `502` without contacting the destination:
+
+```http
+HTTP/1.1 502 Bad Gateway
+Proxy-Status: egress; error=http_request_denied; details="forwarding loop detected"
+```
+
+Give each proxy in a chain a distinct `ProxyName`. Set
+`RejectForwardingLoops = false` to forward such requests anyway. `CONNECT`
+requests carry no `Via` and are not checked.
 
 ## Logging
 

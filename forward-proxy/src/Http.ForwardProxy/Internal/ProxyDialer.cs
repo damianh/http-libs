@@ -17,6 +17,9 @@ internal sealed class ProxyDialer(DestinationPolicy policy, IOptions<ForwardProx
 {
     private readonly TimeSpan _connectTimeout = options.Value.ConnectTimeout;
 
+    /// <summary>Resolves a host name. Replaceable by tests to produce resolution failures and timeouts.</summary>
+    internal Func<string, CancellationToken, Task<IPAddress[]>> ResolveHostAsync { get; init; } = Dns.GetHostAddressesAsync;
+
     /// <summary>Connects to <paramref name="host"/>:<paramref name="port"/>, or throws <see cref="ProxyErrorException"/>.</summary>
     public async Task<Socket> ConnectAsync(string host, int port, CancellationToken cancellationToken)
     {
@@ -57,16 +60,20 @@ internal sealed class ProxyDialer(DestinationPolicy policy, IOptions<ForwardProx
             }
         }
 
-        throw new ProxyErrorException(lastError?.SocketErrorCode switch
+        throw new ProxyErrorException(ConnectError(lastError?.SocketErrorCode));
+    }
+
+    /// <summary>Maps the socket error of the last failed connection attempt to a proxy error.</summary>
+    internal static ProxyError ConnectError(SocketError? error) =>
+        error switch
         {
             SocketError.ConnectionRefused => new(StatusCodes.Status502BadGateway, ProxyErrorTypes.ConnectionRefused, "Destination refused the connection."),
             SocketError.HostUnreachable or SocketError.NetworkUnreachable => new(StatusCodes.Status502BadGateway, ProxyErrorTypes.DestinationIpUnroutable, "Destination is unreachable."),
             SocketError.TimedOut => new(StatusCodes.Status504GatewayTimeout, ProxyErrorTypes.ConnectionTimeout, "Timed out connecting to destination."),
             _ => new(StatusCodes.Status502BadGateway, ProxyErrorTypes.DestinationUnavailable, "Destination is unavailable."),
-        });
-    }
+        };
 
-    private static async Task<IPAddress[]> ResolveAsync(string host, CancellationToken timeoutToken, CancellationToken requestToken)
+    private async Task<IPAddress[]> ResolveAsync(string host, CancellationToken timeoutToken, CancellationToken requestToken)
     {
         if (IPAddress.TryParse(host, out var literal))
         {
@@ -75,7 +82,7 @@ internal sealed class ProxyDialer(DestinationPolicy policy, IOptions<ForwardProx
 
         try
         {
-            var addresses = await Dns.GetHostAddressesAsync(host, timeoutToken).ConfigureAwait(false);
+            var addresses = await ResolveHostAsync(host, timeoutToken).ConfigureAwait(false);
             if (addresses.Length == 0)
             {
                 throw new ProxyErrorException(new(StatusCodes.Status502BadGateway, ProxyErrorTypes.DnsError, "Destination host has no addresses."));

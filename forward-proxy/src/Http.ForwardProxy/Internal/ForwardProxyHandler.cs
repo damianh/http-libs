@@ -2,6 +2,7 @@
 // See LICENSE in the project root for license information.
 
 using System.Diagnostics;
+using System.Globalization;
 using System.IO.Pipelines;
 using System.Net;
 using System.Net.Http;
@@ -21,6 +22,7 @@ namespace DamianH.Http.ForwardProxy.Internal;
 internal sealed class ForwardProxyHandler : IDisposable
 {
     private static readonly ProxyError TunnelLimitReached = new(StatusCodes.Status503ServiceUnavailable, ProxyErrorTypes.ConnectionLimitReached, "Too many concurrent tunnels.");
+    private static readonly ProxyError ForwardingLoop = new(StatusCodes.Status502BadGateway, ProxyErrorTypes.HttpRequestDenied, "Via shows the request already passed through this proxy.", "forwarding loop detected");
 
     private readonly ForwardProxyOptions _options;
     private readonly DestinationPolicy _policy;
@@ -159,7 +161,58 @@ internal sealed class ForwardProxyHandler : IDisposable
             return;
         }
 
+        if (TryAnswerMaxForwards(context))
+        {
+            _metrics.Request(ForwardProxyRequestKind.Http, Outcomes.Allowed);
+            return;
+        }
+
         await ForwardAsync(context, target, destination, intercepted: false).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Applies <c>Max-Forwards</c> to a TRACE or OPTIONS request (RFC 9110 §7.6.2): a positive value is decremented
+    /// before forwarding; at zero the proxy answers itself. Returns <see langword="true"/> if the response was written.
+    /// An invalid value is forwarded unchanged.
+    /// </summary>
+    private static bool TryAnswerMaxForwards(HttpContext context)
+    {
+        var request = context.Request;
+        var isTrace = HttpMethods.IsTrace(request.Method);
+        if (!isTrace && !HttpMethods.IsOptions(request.Method)
+            || !TryParseMaxForwards(request.Headers.MaxForwards, out var maxForwards))
+        {
+            return false;
+        }
+
+        if (maxForwards > 0)
+        {
+            request.Headers.MaxForwards = (maxForwards - 1).ToString(CultureInfo.InvariantCulture);
+            return false;
+        }
+
+        // TRACE is not echoed: reflecting the request (including credentials) enables cross-site tracing.
+        if (isTrace)
+        {
+            context.Response.StatusCode = StatusCodes.Status405MethodNotAllowed;
+            context.Response.Headers.Allow = "OPTIONS";
+        }
+        else
+        {
+            context.Response.StatusCode = StatusCodes.Status200OK;
+        }
+
+        context.Response.ContentLength = 0;
+        return true;
+    }
+
+    private static bool TryParseMaxForwards(Microsoft.Extensions.Primitives.StringValues values, out ulong maxForwards)
+    {
+        maxForwards = 0;
+        return values.Count == 1
+            && values[0] is { Length: > 0 } value
+            && value.AsSpan().IndexOfAnyExceptInRange('0', '9') < 0
+            && ulong.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out maxForwards);
     }
 
     /// <summary>
@@ -179,6 +232,20 @@ internal sealed class ForwardProxyHandler : IDisposable
 
     private async Task ForwardAsync(HttpContext context, Uri target, ForwardProxyDestination destination, bool intercepted)
     {
+        if (_options.RejectForwardingLoops && ViaHeader.ContainsReceivedBy(context.Request.Headers.Via, _options.ProxyName))
+        {
+            if (intercepted)
+            {
+                RejectIntercepted(context, destination, ForwardingLoop);
+            }
+            else
+            {
+                Reject(context, destination, ForwardingLoop, Outcomes.Denied);
+            }
+
+            return;
+        }
+
         // An upgraded connection is a tunnel, so it counts against the same concurrency limit as CONNECT. Inside an
         // intercepted tunnel it is already counted.
         var isUpgrade = HttpForwarder.IsWebSocketUpgrade(context);
@@ -246,7 +313,10 @@ internal sealed class ForwardProxyHandler : IDisposable
         context.Response.StatusCode = error.StatusCode;
         if (_options.AddProxyStatusHeader)
         {
-            context.Response.Headers["Proxy-Status"] = $"{_options.ProxyName}; error={error.ErrorType}";
+            // Details are constant strings without '"' or '\', so they need no escaping as an sf-string.
+            context.Response.Headers["Proxy-Status"] = error.Details is null
+                ? $"{_options.ProxyName}; error={error.ErrorType}"
+                : $"{_options.ProxyName}; error={error.ErrorType}; details=\"{error.Details}\"";
         }
     }
 
@@ -368,13 +438,18 @@ internal sealed class ForwardProxyHandler : IDisposable
         /// <param name="context">The <c>CONNECT</c> request.</param>
         /// <param name="clientClosed">Signals that the client connection or stream carrying the tunnel has closed.</param>
         /// <param name="abortClient">Aborts the client connection or stream carrying the tunnel.</param>
-        public async Task RunAsync(
+        /// <param name="resetUpstreamOnClientAbort">
+        /// When <see langword="true"/> and <paramref name="clientClosed"/> fired, the upstream connection is closed with a TCP
+        /// RST rather than a FIN (RFC 9113 section 8.5).
+        /// </param>
+        public async Task<TunnelPump.Result> RunAsync(
             PipeReader clientInput,
             PipeWriter clientOutput,
             CancellationToken cancellationToken,
             HttpContext context,
             CancellationToken clientClosed,
-            Action abortClient)
+            Action abortClient,
+            bool resetUpstreamOnClientAbort = false)
         {
             var telemetry = new TunnelTelemetry(_owner._metrics, _owner._logger, _destination);
             var result = default(TunnelPump.Result);
@@ -395,7 +470,14 @@ internal sealed class ForwardProxyHandler : IDisposable
                 else
                 {
                     result = await TunnelPump.RunAsync(clientInput, clientOutput, _socket!, _owner._options.TunnelIdleTimeout, cancellationToken).ConfigureAwait(false);
+                    if (resetUpstreamOnClientAbort && clientClosed.IsCancellationRequested && !result.UpstreamFailed)
+                    {
+                        // A zero linger timeout makes closing the socket send RST.
+                        _socket!.LingerState = new LingerOption(true, 0);
+                    }
                 }
+
+                return result;
             }
             finally
             {
