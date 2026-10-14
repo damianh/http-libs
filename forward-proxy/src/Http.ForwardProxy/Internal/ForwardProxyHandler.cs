@@ -22,6 +22,7 @@ namespace DamianH.Http.ForwardProxy.Internal;
 internal sealed class ForwardProxyHandler : IDisposable
 {
     private static readonly ProxyError TunnelLimitReached = new(StatusCodes.Status503ServiceUnavailable, ProxyErrorTypes.ConnectionLimitReached, "Too many concurrent tunnels.");
+    private static readonly ProxyError ForwardingLoop = new(StatusCodes.Status502BadGateway, ProxyErrorTypes.HttpRequestDenied, "Via shows the request already passed through this proxy.", "forwarding loop detected");
 
     private readonly ForwardProxyOptions _options;
     private readonly DestinationPolicy _policy;
@@ -231,6 +232,20 @@ internal sealed class ForwardProxyHandler : IDisposable
 
     private async Task ForwardAsync(HttpContext context, Uri target, ForwardProxyDestination destination, bool intercepted)
     {
+        if (_options.RejectForwardingLoops && ViaHeader.ContainsReceivedBy(context.Request.Headers.Via, _options.ProxyName))
+        {
+            if (intercepted)
+            {
+                RejectIntercepted(context, destination, ForwardingLoop);
+            }
+            else
+            {
+                Reject(context, destination, ForwardingLoop, Outcomes.Denied);
+            }
+
+            return;
+        }
+
         // An upgraded connection is a tunnel, so it counts against the same concurrency limit as CONNECT. Inside an
         // intercepted tunnel it is already counted.
         var isUpgrade = HttpForwarder.IsWebSocketUpgrade(context);
@@ -298,7 +313,10 @@ internal sealed class ForwardProxyHandler : IDisposable
         context.Response.StatusCode = error.StatusCode;
         if (_options.AddProxyStatusHeader)
         {
-            context.Response.Headers["Proxy-Status"] = $"{_options.ProxyName}; error={error.ErrorType}";
+            // Details are constant strings without '"' or '\', so they need no escaping as an sf-string.
+            context.Response.Headers["Proxy-Status"] = error.Details is null
+                ? $"{_options.ProxyName}; error={error.ErrorType}"
+                : $"{_options.ProxyName}; error={error.ErrorType}; details=\"{error.Details}\"";
         }
     }
 

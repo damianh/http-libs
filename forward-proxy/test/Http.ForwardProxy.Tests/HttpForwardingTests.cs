@@ -106,6 +106,79 @@ public class HttpForwardingTests
         response.Header("Via").ShouldBe("1.1 origin-gateway, 1.1 forward-proxy");
     }
 
+    [Theory]
+    [InlineData("1.1 forward-proxy")]
+    [InlineData("1.0 client-gateway, 1.1 EGRESS (looped)")]
+    public async Task RejectsForwardingLoopsWithoutContactingTheOrigin(string via)
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        var proxyName = via.Contains("EGRESS", StringComparison.Ordinal) ? "egress" : "forward-proxy";
+        await using var proxy = await ProxyHost.StartAsync(o => o.ProxyName = proxyName);
+        using var socket = await RawProxy.ConnectAsync(proxy.Port);
+
+        await RawProxy.SendAsync(socket, $"GET http://127.0.0.1:{port}/ HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nVia: {via}\r\n\r\n");
+        var response = await RawProxy.ReadResponseAsync(socket);
+
+        response.StatusCode.ShouldBe(502);
+        response.Header("Proxy-Status").ShouldBe($"{proxyName}; error=http_request_denied; details=\"forwarding loop detected\"");
+        listener.Pending().ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task ForwardsWhenViaNamesOtherProxies()
+    {
+        await using var origin = await StartOriginAsync(context =>
+            context.Response.WriteAsync($"via=[{context.Request.Headers.Via}]\n", context.RequestAborted));
+        await using var proxy = await ProxyHost.StartAsync();
+        using var socket = await RawProxy.ConnectAsync(proxy.Port);
+        var port = ProxyHost.GetPort(origin);
+
+        await RawProxy.SendAsync(socket, $"GET http://127.0.0.1:{port}/ HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\nVia: 1.1 forward-proxy-2 (forward-proxy)\r\nVia: 1.0 edge\r\n\r\n");
+        var response = await RawProxy.ReadResponseAsync(socket);
+        var body = await RawProxy.ReadToEndAsync(socket, response.Body);
+
+        response.StatusCode.ShouldBe(200);
+        body.ShouldContain("via=[1.1 forward-proxy-2 (forward-proxy), 1.0 edge, 1.1 forward-proxy]\n");
+    }
+
+    [Fact]
+    public async Task ForwardsLoopsWhenDetectionIsDisabled()
+    {
+        await using var origin = await StartOriginAsync(context =>
+            context.Response.WriteAsync($"via=[{context.Request.Headers.Via}]\n", context.RequestAborted));
+        await using var proxy = await ProxyHost.StartAsync(o => o.RejectForwardingLoops = false);
+        using var socket = await RawProxy.ConnectAsync(proxy.Port);
+        var port = ProxyHost.GetPort(origin);
+
+        await RawProxy.SendAsync(socket, $"GET http://127.0.0.1:{port}/ HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\nVia: 1.1 forward-proxy\r\n\r\n");
+        var response = await RawProxy.ReadResponseAsync(socket);
+        var body = await RawProxy.ReadToEndAsync(socket, response.Body);
+
+        response.StatusCode.ShouldBe(200);
+        body.ShouldContain("via=[1.1 forward-proxy, 1.1 forward-proxy]\n");
+    }
+
+    [Fact]
+    public async Task UsesTheConfiguredProxyNameInVia()
+    {
+        await using var origin = await StartOriginAsync(context =>
+            context.Response.WriteAsync($"via=[{context.Request.Headers.Via}]\n", context.RequestAborted));
+        await using var proxy = await ProxyHost.StartAsync(o => o.ProxyName = "egress-1");
+        using var socket = await RawProxy.ConnectAsync(proxy.Port);
+        var port = ProxyHost.GetPort(origin);
+
+        // The default name in Via is another proxy's entry here, so it is forwarded.
+        await RawProxy.SendAsync(socket, $"GET http://127.0.0.1:{port}/ HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\nVia: 1.1 forward-proxy\r\n\r\n");
+        var response = await RawProxy.ReadResponseAsync(socket);
+        var body = await RawProxy.ReadToEndAsync(socket, response.Body);
+
+        response.StatusCode.ShouldBe(200);
+        body.ShouldContain("via=[1.1 forward-proxy, 1.1 egress-1]\n");
+        response.Header("Via").ShouldBe("1.1 egress-1");
+    }
+
     [Fact]
     public async Task DoesNotForwardHopByHopRequestHeaders()
     {
