@@ -83,7 +83,7 @@ try {
         # Dev MinVer prereleases precede the deliberate released dependency floor. Repack identical
         # contract binaries at that floor in this private feed, without changing release artifacts.
         Write-Host "Smoke-only ContentStore package version $floor substitutes for $builtVersion to satisfy the released dependency floor."
-        $contractProject = Join-Path $PSScriptRoot '..\..\src\HttpHybridCacheHandler.ContentStore'
+        $contractProject = Join-Path $PSScriptRoot '..\..\src\HybridCacheHandler.ContentStore'
         & dotnet pack $contractProject --no-build -c Release -o $feed "-p:PackageVersion=$floor" "-p:MinVerVersionOverride=$floor" -v minimal
         if ($LASTEXITCODE) { throw 'Cannot pack the smoke-only ContentStore dependency floor.' }
         if (-not (Test-Path (Join-Path $feed "$contractId.$floor.nupkg"))) { throw 'Smoke-only contract package has the wrong version.' }

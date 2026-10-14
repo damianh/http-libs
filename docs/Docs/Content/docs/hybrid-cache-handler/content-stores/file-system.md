@@ -20,7 +20,7 @@ Older targets use a coalescing periodic timer based on `TimeProvider.CreateTimer
 disposal cancels and joins cleanup just as on .NET 10.
 
 [NuGet](https://www.nuget.org/packages/DamianH.Http.HybridCacheHandler.ContentStore.FileSystem/) |
-[Source](https://github.com/damianh/http-libs/tree/main/hybrid-cache-handler/src/HttpHybridCacheHandler.ContentStore.FileSystem)
+[Source](https://github.com/damianh/http-libs/tree/main/hybrid-cache-handler/src/HybridCacheHandler.ContentStore.FileSystem)
 
 ## Registration with bounded retention
 

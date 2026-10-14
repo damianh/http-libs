@@ -48,7 +48,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\HttpHybridCacheHandler.ContentStore\HttpHybridCacheHandler.ContentStore.csproj" />
+    <ProjectReference Include="..\HybridCacheHandler.ContentStore\HybridCacheHandler.ContentStore.csproj" />
     <InternalsVisibleTo Include="HttpHybridCacheHandler.Tests" />
     <InternalsVisibleTo Include="HttpHybridCacheHandler.Compatibility.Tests" />
     <InternalsVisibleTo Include="Tests" />

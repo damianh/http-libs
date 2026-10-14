@@ -12,6 +12,6 @@
     <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.9.0" />
     <PackageReference Include="Shouldly" Version="4.3.0" />
     <PackageReference Include="xunit.v3.core.mtp-v2" Version="3.2.2" />
-    <ProjectReference Include="..\..\src\HttpHybridCacheHandler.ContentStore.GoogleCloudStorage\HttpHybridCacheHandler.ContentStore.GoogleCloudStorage.csproj" />
+    <ProjectReference Include="..\..\src\HybridCacheHandler.ContentStore.GoogleCloudStorage\HybridCacheHandler.ContentStore.GoogleCloudStorage.csproj" />
   </ItemGroup>
 </Project>

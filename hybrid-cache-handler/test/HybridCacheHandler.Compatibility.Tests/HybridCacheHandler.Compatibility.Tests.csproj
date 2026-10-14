@@ -22,7 +22,7 @@
     <PackageReference Include="xunit.v3.assert" Version="3.2.2" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\HttpHybridCacheHandler.Tests\CompatibilityPrimitiveTests.cs" Link="CompatibilityPrimitiveTests.cs" />
+    <Compile Include="..\HybridCacheHandler.Tests\CompatibilityPrimitiveTests.cs" Link="CompatibilityPrimitiveTests.cs" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
     <Reference Include="System.Net.Http" />
@@ -34,12 +34,12 @@
     <PackageReference Include="Microsoft.Bcl.TimeProvider" Version="10.0.10" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\HttpHybridCacheHandler\HttpHybridCacheHandler.csproj" />
-    <ProjectReference Include="..\..\src\HttpHybridCacheHandler.ContentStore\HttpHybridCacheHandler.ContentStore.csproj" />
-    <ProjectReference Include="..\..\src\HttpHybridCacheHandler.ContentStore.AzureBlob\HttpHybridCacheHandler.ContentStore.AzureBlob.csproj" />
-    <ProjectReference Include="..\..\src\HttpHybridCacheHandler.ContentStore.S3\HttpHybridCacheHandler.ContentStore.S3.csproj" />
-    <ProjectReference Include="..\..\src\HttpHybridCacheHandler.ContentStore.GoogleCloudStorage\HttpHybridCacheHandler.ContentStore.GoogleCloudStorage.csproj" />
-    <ProjectReference Include="..\..\src\HttpHybridCacheHandler.ContentStore.FileSystem\HttpHybridCacheHandler.ContentStore.FileSystem.csproj" />
+    <ProjectReference Include="..\..\src\HybridCacheHandler\HybridCacheHandler.csproj" />
+    <ProjectReference Include="..\..\src\HybridCacheHandler.ContentStore\HybridCacheHandler.ContentStore.csproj" />
+    <ProjectReference Include="..\..\src\HybridCacheHandler.ContentStore.AzureBlob\HybridCacheHandler.ContentStore.AzureBlob.csproj" />
+    <ProjectReference Include="..\..\src\HybridCacheHandler.ContentStore.S3\HybridCacheHandler.ContentStore.S3.csproj" />
+    <ProjectReference Include="..\..\src\HybridCacheHandler.ContentStore.GoogleCloudStorage\HybridCacheHandler.ContentStore.GoogleCloudStorage.csproj" />
+    <ProjectReference Include="..\..\src\HybridCacheHandler.ContentStore.FileSystem\HybridCacheHandler.ContentStore.FileSystem.csproj" />
     <ProjectReference Update="@(ProjectReference)" Condition="'$(CompatibilityTargetFramework)' == 'netstandard2.0'"
                       SetTargetFramework="TargetFramework=netstandard2.0"
                       AdditionalProperties="TargetFramework=netstandard2.0"

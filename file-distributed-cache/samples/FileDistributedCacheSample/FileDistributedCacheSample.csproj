@@ -11,7 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\hybrid-cache-handler\src\HttpHybridCacheHandler\HttpHybridCacheHandler.csproj" />
+    <ProjectReference Include="..\..\..\hybrid-cache-handler\src\HybridCacheHandler\HybridCacheHandler.csproj" />
     <ProjectReference Include="..\..\src\FileDistributedCache\FileDistributedCache.csproj" />
   </ItemGroup>
 

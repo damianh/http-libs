@@ -44,7 +44,7 @@ dotnet add package DamianH.Http.HybridCacheHandler.ContentStore
 ```
 
 [NuGet](https://www.nuget.org/packages/DamianH.Http.HybridCacheHandler.ContentStore/) |
-[Contract source](https://github.com/damianh/http-libs/tree/main/hybrid-cache-handler/src/HttpHybridCacheHandler.ContentStore)
+[Contract source](https://github.com/damianh/http-libs/tree/main/hybrid-cache-handler/src/HybridCacheHandler.ContentStore)
 
 `IHttpCacheContentStore` provides complete streaming writes, independently owned
 read streams, and single-key removal. `ILargeHttpCacheContentStore` identifies the

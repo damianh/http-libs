@@ -15,7 +15,7 @@ content-store abstractions, not the HTTP handler. Its independent release tag
 prefix is `cache-gcs-v`.
 
 [NuGet](https://www.nuget.org/packages/DamianH.Http.HybridCacheHandler.ContentStore.GoogleCloudStorage/) |
-[Source](https://github.com/damianh/http-libs/tree/main/hybrid-cache-handler/src/HttpHybridCacheHandler.ContentStore.GoogleCloudStorage)
+[Source](https://github.com/damianh/http-libs/tree/main/hybrid-cache-handler/src/HybridCacheHandler.ContentStore.GoogleCloudStorage)
 
 ## Registration
 
@@ -149,7 +149,7 @@ $env:HTTP_CACHE_GCS_TEST_BUCKET = "my-existing-private-test-bucket"
 $env:HTTP_CACHE_GCS_TEST_PREFIX = "http-cache-adapter-tests"
 # Optional if ADC is already configured:
 $env:GOOGLE_APPLICATION_CREDENTIALS = "C:\private\gcs-test-service-account.json"
-dotnet test --project hybrid-cache-handler\test\HttpHybridCacheHandler.ContentStore.GoogleCloudStorage.Tests\HttpHybridCacheHandler.ContentStore.GoogleCloudStorage.Tests.csproj
+dotnet test --project hybrid-cache-handler\test\HybridCacheHandler.ContentStore.GoogleCloudStorage.Tests\HybridCacheHandler.ContentStore.GoogleCloudStorage.Tests.csproj
 ```
 
 Once enabled, missing configuration, credentials, authorization, transport,

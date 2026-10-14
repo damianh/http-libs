@@ -10,9 +10,9 @@
     <!-- The net10 host needs the forwarding assemblies referenced by the forced legacy binaries. -->
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.10" />
     <PackageReference Include="Microsoft.Bcl.TimeProvider" Version="10.0.10" />
-    <ProjectReference Include="..\..\src\HttpHybridCacheHandler\HttpHybridCacheHandler.csproj" />
-    <ProjectReference Include="..\..\src\HttpHybridCacheHandler.ContentStore\HttpHybridCacheHandler.ContentStore.csproj" />
-    <ProjectReference Include="..\..\src\HttpHybridCacheHandler.ContentStore.FileSystem\HttpHybridCacheHandler.ContentStore.FileSystem.csproj" />
+    <ProjectReference Include="..\..\src\HybridCacheHandler\HybridCacheHandler.csproj" />
+    <ProjectReference Include="..\..\src\HybridCacheHandler.ContentStore\HybridCacheHandler.ContentStore.csproj" />
+    <ProjectReference Include="..\..\src\HybridCacheHandler.ContentStore.FileSystem\HybridCacheHandler.ContentStore.FileSystem.csproj" />
     <ProjectReference Update="@(ProjectReference)"
                       SetTargetFramework="TargetFramework=netstandard2.0"
                       AdditionalProperties="TargetFramework=netstandard2.0"

@@ -15,7 +15,7 @@ ContentStore package, not the HTTP handler or HybridCache. Release tags use
 `cache-azureblob-v`. NativeAOT/trimming compatibility has **not** been validated.
 
 [NuGet](https://www.nuget.org/packages/DamianH.Http.HybridCacheHandler.ContentStore.AzureBlob/) |
-[Source](https://github.com/damianh/http-libs/tree/main/hybrid-cache-handler/src/HttpHybridCacheHandler.ContentStore.AzureBlob)
+[Source](https://github.com/damianh/http-libs/tree/main/hybrid-cache-handler/src/HybridCacheHandler.ContentStore.AzureBlob)
 
 ## Registration
 
@@ -172,7 +172,7 @@ The test does not provision resources, discover credentials, or modify account p
 From the repository root, after configuring those environment variables:
 
 ```powershell
-dotnet test --project hybrid-cache-handler\test\HttpHybridCacheHandler.ContentStore.AzureBlob.Tests\HttpHybridCacheHandler.ContentStore.AzureBlob.Tests.csproj
+dotnet test --project hybrid-cache-handler\test\HybridCacheHandler.ContentStore.AzureBlob.Tests\HybridCacheHandler.ContentStore.AzureBlob.Tests.csproj
 ```
 
 Each run uses a unique `http-cache-integration/<guid>` namespace and checks exact

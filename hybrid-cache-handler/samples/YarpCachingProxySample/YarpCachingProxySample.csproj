@@ -10,7 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\HttpHybridCacheHandler\HttpHybridCacheHandler.csproj" />
+    <ProjectReference Include="..\..\src\HybridCacheHandler\HybridCacheHandler.csproj" />
   </ItemGroup>
 
 </Project>

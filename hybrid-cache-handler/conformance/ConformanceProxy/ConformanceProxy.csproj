@@ -10,8 +10,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\HttpHybridCacheHandler\HttpHybridCacheHandler.csproj" />
-    <ProjectReference Include="..\..\src\HttpHybridCacheHandler.ContentStore.FileSystem\HttpHybridCacheHandler.ContentStore.FileSystem.csproj" />
+    <ProjectReference Include="..\..\src\HybridCacheHandler\HybridCacheHandler.csproj" />
+    <ProjectReference Include="..\..\src\HybridCacheHandler.ContentStore.FileSystem\HybridCacheHandler.ContentStore.FileSystem.csproj" />
     <Compile Include="..\Shared\*.cs" Link="Shared\%(Filename)%(Extension)" />
   </ItemGroup>
 

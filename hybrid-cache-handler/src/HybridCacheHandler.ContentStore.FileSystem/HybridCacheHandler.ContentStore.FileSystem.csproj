@@ -1,13 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <AssemblyName>DamianH.Http.HybridCacheHandler.ContentStore.S3</AssemblyName>
-    <RootNamespace>DamianH.Http.HybridCacheHandler</RootNamespace>
+    <AssemblyName>DamianH.Http.HybridCacheHandler.ContentStore.FileSystem</AssemblyName>
+    <RootNamespace>DamianH.Http.HybridCacheHandler.ContentStore.FileSystem</RootNamespace>
     <MinVerMinimumMajorMinor>0.1</MinVerMinimumMajorMinor>
-    <MinVerTagPrefix>cache-s3-v</MinVerTagPrefix>
+    <MinVerTagPrefix>cache-filesystem-v</MinVerTagPrefix>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <PackageId>DamianH.Http.HybridCacheHandler.ContentStore.S3</PackageId>
+    <PackageId>DamianH.Http.HybridCacheHandler.ContentStore.FileSystem</PackageId>
     <Authors>Damian Hickey</Authors>
-    <Description>Streaming Amazon S3 content storage for HTTP HybridCache using the official AWS SDK.</Description>
+    <Description>Streaming filesystem storage with optional bounded retention for HTTP cache bodies.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/damianh/http-libs</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
@@ -17,17 +17,16 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="\" />
-    <PackageReference Include="AWSSDK.S3" Version="4.0.102.5" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.10" />
-    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.10" />
     <PackageReference Include="MinVer" Version="7.0.0" PrivateAssets="all" />
-    <ProjectReference Include="..\HttpHybridCacheHandler.ContentStore\HttpHybridCacheHandler.ContentStore.csproj" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.10" />
+    <ProjectReference Include="..\HybridCacheHandler.ContentStore\HybridCacheHandler.ContentStore.csproj" />
+    <InternalsVisibleTo Include="HttpHybridCacheHandler.ContentStore.FileSystem.Tests" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' != 'net10.0'">
+    <PackageReference Include="Microsoft.Bcl.TimeProvider" Version="10.0.10" />
     <PackageReference Include="System.Memory" Version="4.6.3" />
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.10" />
-  </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
-    <Reference Include="System.Net.Http" />
   </ItemGroup>
 </Project>
