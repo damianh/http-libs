@@ -63,6 +63,8 @@ or renaming a protocol test.
 |---|---|
 | `CONNECT` with `:authority` opens a tunnel; `200` then `DATA` frames carry the bytes | `Http2ConnectTests.TunnelsOverHttp2`, `TlsInterceptionTests.InterceptsHttp2Connect` |
 | A denied tunnel gets a final non-`2xx` response | `Http2ConnectTests.ReportsDeniedTunnelsOverHttp2` |
+| A TCP error on the destination connection (for example, a reset) resets the stream with `CONNECT_ERROR` | `Http2ConnectTests.ResetsTheStreamWithConnectErrorWhenTheDestinationResets` |
+| An aborted stream closes the destination connection with a TCP `RST` | `Http2ConnectTests.ResetsTheDestinationConnectionWhenTheStreamIsAborted` |
 | HTTP/1.1 `CONNECT` still works on the same TLS listener | `Http2ConnectTests.Http1ConnectStillWorksOnTlsListener` |
 | [RFC 8441](https://www.rfc-editor.org/rfc/rfc8441.html) extended `CONNECT` is passed to the application, not tunneled | `Http2ConnectTests.PassesExtendedConnectToTheApplication` |
 | Extended `CONNECT` inside an intercepted tunnel is rejected with `400` | `TlsInterceptionTests.RejectsExtendedConnectInsideTheTunnel` |
@@ -91,12 +93,6 @@ curl is not available.
 The proxy name in each value is checked by `ConnectTunnelTests.BlocksLoopbackByDefault`.
 
 ## Gaps
-
-Not implemented:
-
-- **HTTP/2 tunnel errors** (RFC 9113 §8.5): when the destination connection
-  fails (for example, it is reset), the proxy ends the HTTP/2 stream normally
-  with `END_STREAM` instead of resetting it with `CONNECT_ERROR`.
 
 Implemented but not covered by a test:
 

@@ -42,7 +42,10 @@ connection, which is what proxy clients do. A later `CONNECT` on a keep-alive
 connection gets `501`. Other traffic passes to Kestrel unchanged, so the same
 endpoint can serve health checks and other endpoints.
 
-HTTP/2 `CONNECT` needs TLS with ALPN (`h2`) on the listener. Extended `CONNECT`
+HTTP/2 `CONNECT` needs TLS with ALPN (`h2`) on the listener. If the destination
+connection fails (for example, it is reset), the tunnel's stream is reset with
+`CONNECT_ERROR`; if the client resets the stream, the destination connection is
+closed with a TCP `RST` (RFC 9113 §8.5). Extended `CONNECT`
 (WebSockets over HTTP/2, `:protocol`) is not intercepted. Absolute-form
 `https://` targets are rejected with `400`; clients must use `CONNECT`. HTTP/3
 `CONNECT` is not supported and returns `501`.

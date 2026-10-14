@@ -438,13 +438,18 @@ internal sealed class ForwardProxyHandler : IDisposable
         /// <param name="context">The <c>CONNECT</c> request.</param>
         /// <param name="clientClosed">Signals that the client connection or stream carrying the tunnel has closed.</param>
         /// <param name="abortClient">Aborts the client connection or stream carrying the tunnel.</param>
-        public async Task RunAsync(
+        /// <param name="resetUpstreamOnClientAbort">
+        /// When <see langword="true"/> and <paramref name="clientClosed"/> fired, the upstream connection is closed with a TCP
+        /// RST rather than a FIN (RFC 9113 section 8.5).
+        /// </param>
+        public async Task<TunnelPump.Result> RunAsync(
             PipeReader clientInput,
             PipeWriter clientOutput,
             CancellationToken cancellationToken,
             HttpContext context,
             CancellationToken clientClosed,
-            Action abortClient)
+            Action abortClient,
+            bool resetUpstreamOnClientAbort = false)
         {
             var telemetry = new TunnelTelemetry(_owner._metrics, _owner._logger, _destination);
             var result = default(TunnelPump.Result);
@@ -465,7 +470,14 @@ internal sealed class ForwardProxyHandler : IDisposable
                 else
                 {
                     result = await TunnelPump.RunAsync(clientInput, clientOutput, _socket!, _owner._options.TunnelIdleTimeout, cancellationToken).ConfigureAwait(false);
+                    if (resetUpstreamOnClientAbort && clientClosed.IsCancellationRequested && !result.UpstreamFailed)
+                    {
+                        // A zero linger timeout makes closing the socket send RST.
+                        _socket!.LingerState = new LingerOption(true, 0);
+                    }
                 }
+
+                return result;
             }
             finally
             {
