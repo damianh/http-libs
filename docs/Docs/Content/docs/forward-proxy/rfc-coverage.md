@@ -19,7 +19,6 @@ or renaming a protocol test.
 
 | Section | Requirement | Tests |
 |---|---|---|
-| §7.2 | Absolute-form target, not the received `Host`, identifies the destination | `HttpForwardingTests.AbsoluteTargetsOverrideTheReceivedHost`, `HttpForwardingTests.ForwardsAbsoluteFormRequests` |
 | §7.6.1 | Remove headers named in `Connection` (requests and responses) | `HttpForwardingTests.StripsHeadersNamedInConnection`, `StripsConnectionOptionsWhenCloseIsAlsoPresent`, `StripsMixedConnectionOptionsAcrossKeepAliveRequests`, `StripsMixedConnectionOptionsAfterARejectedUpgrade`; `Http1RequestHeadObserverTests.*` |
 | §7.6.1 | Do not forward fixed hop-by-hop fields (`Proxy-Connection`, `Keep-Alive`, `TE`, `HTTP2-Settings`) | `HttpForwardingTests.DoesNotForwardHopByHopRequestHeaders`, `HttpForwardingTests.ForwardsAbsoluteFormRequests` |
 | §7.6.3 | Add `Via` with the received protocol version, append to existing values, on requests and responses | `HttpForwardingTests.ForwardsAbsoluteFormRequests`, `AppendsToReceivedViaHeaders`, `ForwardsWebSocketUpgrades` |
@@ -43,6 +42,7 @@ or renaming a protocol test.
 | Section | Requirement | Tests |
 |---|---|---|
 | §3.2.2 | Accept absolute-form; send origin-form with the path and query unchanged | `HttpForwardingTests.ForwardsAbsoluteFormRequests`, `PreservesTheOriginalPathAndQueryOnTheWire` |
+| §3.2.2 (with RFC 9110 §7.2) | Use the absolute-form authority, not the received `Host`, as the destination | `HttpForwardingTests.AbsoluteTargetsOverrideTheReceivedHost`, `HttpForwardingTests.ForwardsAbsoluteFormRequests` |
 | §3.2.2 | Only `http://` is forwarded; absolute-form `https://` is rejected | `HttpForwardingTests.RejectsAbsoluteFormHttpsTargets` |
 | §3.2.3 | `CONNECT` target is authority-form | `ConnectTunnelTests.RejectsMalformedRequests`, `AuthorityParserTests.RejectsInvalidAuthorities` |
 | §2.2, §5.1, §5.2 | Reject bare CR/LF, whitespace before `:`, and `obs-fold` in a `CONNECT` head | `ConnectRequestParserTests.RejectsMalformedRequests`, `ConnectTunnelTests.RejectsMalformedRequests` |
