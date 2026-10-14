@@ -1,13 +1,22 @@
-# DamianH.HttpHybridCacheHandler
+# DamianH.Http.HybridCacheHandler
 
-[![NuGet](https://img.shields.io/nuget/v/DamianH.HttpHybridCacheHandler.svg)](https://www.nuget.org/packages/DamianH.HttpHybridCacheHandler/)
-[![Downloads](https://img.shields.io/nuget/dt/DamianH.HttpHybridCacheHandler.svg)](https://www.nuget.org/packages/DamianH.HttpHybridCacheHandler/)
+[![NuGet](https://img.shields.io/nuget/v/DamianH.Http.HybridCacheHandler.svg)](https://www.nuget.org/packages/DamianH.Http.HybridCacheHandler/)
+[![Downloads](https://img.shields.io/nuget/dt/DamianH.Http.HybridCacheHandler.svg)](https://www.nuget.org/packages/DamianH.Http.HybridCacheHandler/)
 
 RFC 9111 client-side HTTP caching for `HttpClient`, backed by .NET `HybridCache`
 for L1 memory and optional L2 distributed storage.
 
 **[Full documentation](https://damianh.github.io/http-libs/docs/hybrid-cache-handler/overview/)**
 is the authoritative guide for configuration, behavior, metrics, and limitations.
+
+## Naming migration
+
+The package IDs, assembly names, and namespaces now use
+`DamianH.Http.HybridCacheHandler`, including all `ContentStore` packages.
+Update package references and `using` directives together. The
+`HttpHybridCacheHandler` type and `AddHttpHybridCacheHandler` methods are unchanged.
+The metrics meter name and keyed DI registration key also use the new name;
+update meter subscriptions and any literal registration keys.
 
 ## Frameworks
 
@@ -29,7 +38,7 @@ See [framework compatibility](https://damianh.github.io/http-libs/docs/hybrid-ca
 From your application project directory:
 
 ```powershell
-dotnet add package DamianH.HttpHybridCacheHandler
+dotnet add package DamianH.Http.HybridCacheHandler
 ```
 
 ```csharp

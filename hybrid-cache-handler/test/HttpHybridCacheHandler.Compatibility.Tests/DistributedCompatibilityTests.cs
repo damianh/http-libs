@@ -3,7 +3,7 @@ using System.Net.Http.Headers;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace DamianH.HttpHybridCacheHandler.Compatibility.Tests;
+namespace DamianH.Http.HybridCacheHandler.Compatibility.Tests;
 
 public sealed class DistributedCompatibilityTests
 {

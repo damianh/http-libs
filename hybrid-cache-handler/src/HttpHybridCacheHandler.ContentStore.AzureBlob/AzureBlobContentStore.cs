@@ -7,7 +7,7 @@ using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Blobs.Specialized;
 
-namespace DamianH.HttpHybridCacheHandler.ContentStore.AzureBlob;
+namespace DamianH.Http.HybridCacheHandler.ContentStore.AzureBlob;
 
 /// <summary>Stores complete opaque response bodies in an existing Azure Blob container.</summary>
 /// <remarks>

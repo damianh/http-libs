@@ -1,6 +1,6 @@
 using System.IO.Pipelines;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 internal sealed class DownloadReadStream : CompatibleStream
 {

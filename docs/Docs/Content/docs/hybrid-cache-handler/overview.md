@@ -12,11 +12,11 @@ topics:
 
 # HTTP hybrid caching overview
 
-`DamianH.HttpHybridCacheHandler` provides RFC 9111 compliant client-side HTTP caching
+`DamianH.Http.HybridCacheHandler` provides RFC 9111 compliant client-side HTTP caching
 for `HttpClient`, powered by .NET's `HybridCache` for efficient L1 (memory) and L2
 (distributed) caching.
 
-[NuGet package](https://www.nuget.org/packages/DamianH.HttpHybridCacheHandler/) |
+[NuGet package](https://www.nuget.org/packages/DamianH.Http.HybridCacheHandler/) |
 [Source](https://github.com/damianh/http-libs/tree/main/hybrid-cache-handler)
 
 ## Installation
@@ -24,7 +24,7 @@ for `HttpClient`, powered by .NET's `HybridCache` for efficient L1 (memory) and 
 Run in the application project directory:
 
 ```powershell
-dotnet add package DamianH.HttpHybridCacheHandler
+dotnet add package DamianH.Http.HybridCacheHandler
 ```
 
 ## Frameworks

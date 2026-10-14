@@ -2,7 +2,7 @@
 // See LICENSE in the project root for license information.
 
 #if NETSTANDARD2_0 || NETFRAMEWORK
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 internal static class HttpContentCompatibility
 {

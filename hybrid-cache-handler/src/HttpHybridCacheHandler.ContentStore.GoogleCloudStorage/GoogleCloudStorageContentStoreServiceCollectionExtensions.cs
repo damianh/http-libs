@@ -2,7 +2,7 @@ using Google.Cloud.Storage.V1;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 /// <summary>Registers the Google Cloud Storage large-body store without a handler dependency.</summary>
 public static class GoogleCloudStorageContentStoreServiceCollectionExtensions

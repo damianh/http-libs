@@ -6,14 +6,14 @@ using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Azure.Storage.Blobs;
-using DamianH.HttpHybridCacheHandler.ContentStore.AzureBlob;
+using DamianH.Http.HybridCacheHandler.ContentStore.AzureBlob;
 using Google.Apis.Download;
 using Google.Apis.Upload;
 using Google.Cloud.Storage.V1;
 using Microsoft.Extensions.Options;
 using StorageObject = Google.Apis.Storage.v1.Data.Object;
 
-namespace DamianH.HttpHybridCacheHandler.Compatibility.Tests;
+namespace DamianH.Http.HybridCacheHandler.Compatibility.Tests;
 
 public sealed class CloudCompatibilityTests
 {

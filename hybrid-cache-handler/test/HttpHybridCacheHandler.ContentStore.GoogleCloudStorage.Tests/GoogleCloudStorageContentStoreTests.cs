@@ -10,7 +10,7 @@ using Google.Cloud.Storage.V1;
 using Microsoft.Extensions.DependencyInjection;
 using StorageObject = Google.Apis.Storage.v1.Data.Object;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 public class GoogleCloudStorageContentStoreTests
 {

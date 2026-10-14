@@ -1,6 +1,6 @@
 # Amazon S3 HTTP cache content store
 
-`DamianH.HttpHybridCacheHandler.ContentStore.S3` targets `net10.0`,
+`DamianH.Http.HybridCacheHandler.ContentStore.S3` targets `net10.0`,
 `netstandard2.0`, and `net472` using the official AWS SDK and independent
 content-store contracts. Release tags use
 `cache-s3-v`.
@@ -10,7 +10,7 @@ content-store contracts. Release tags use
 Install from your application project directory:
 
 ```powershell
-dotnet add package DamianH.HttpHybridCacheHandler.ContentStore.S3
+dotnet add package DamianH.Http.HybridCacheHandler.ContentStore.S3
 ```
 
 Given an application-owned `IAmazonS3` client configured through the normal AWS
@@ -18,7 +18,7 @@ credential chain:
 
 ```csharp
 using Amazon.S3;
-using DamianH.HttpHybridCacheHandler;
+using DamianH.Http.HybridCacheHandler;
 
 services.AddSingleton<IAmazonS3>(s3);
 services.AddHttpHybridCacheS3ContentStore(options =>

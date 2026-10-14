@@ -2,7 +2,7 @@ using Amazon;
 using Amazon.S3;
 using Microsoft.Extensions.Options;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 public class S3IntegrationTests
 {

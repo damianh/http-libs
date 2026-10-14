@@ -1,4 +1,4 @@
-namespace DamianH.HttpHybridCacheHandler.ContentStore.FileSystem;
+namespace DamianH.Http.HybridCacheHandler.ContentStore.FileSystem;
 
 // One consumer, one pending tick, and scheduling through the supplied public TimeProvider.
 internal sealed class CompatibilityPeriodicTimer : IDisposable

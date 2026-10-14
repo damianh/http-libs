@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 
-namespace DamianH.HttpHybridCacheHandler.Compatibility.Tests;
+namespace DamianH.Http.HybridCacheHandler.Compatibility.Tests;
 
 [Collection("Spool budget")]
 public sealed class StreamingCompatibilityTests : IDisposable

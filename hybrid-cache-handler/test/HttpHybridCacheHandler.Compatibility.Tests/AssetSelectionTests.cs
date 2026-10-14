@@ -1,9 +1,9 @@
 using System.Reflection;
 using System.Runtime.Versioning;
-using DamianH.HttpHybridCacheHandler.ContentStore.AzureBlob;
-using DamianH.HttpHybridCacheHandler.ContentStore.FileSystem;
+using DamianH.Http.HybridCacheHandler.ContentStore.AzureBlob;
+using DamianH.Http.HybridCacheHandler.ContentStore.FileSystem;
 
-namespace DamianH.HttpHybridCacheHandler.Compatibility.Tests;
+namespace DamianH.Http.HybridCacheHandler.Compatibility.Tests;
 
 public sealed class AssetSelectionTests
 {
@@ -20,13 +20,18 @@ public sealed class AssetSelectionTests
     {
         var types = new[]
         {
-            typeof(HttpHybridCacheHandler), typeof(IHttpCacheContentStore),
-            typeof(AzureBlobContentStore), typeof(S3ContentStore),
-            typeof(GoogleCloudStorageContentStore), typeof(FileSystemContentStore)
+            (Type: typeof(HttpHybridCacheHandler), AssemblyName: "DamianH.Http.HybridCacheHandler"),
+            (Type: typeof(IHttpCacheContentStore), AssemblyName: "DamianH.Http.HybridCacheHandler.ContentStore"),
+            (Type: typeof(AzureBlobContentStore), AssemblyName: "DamianH.Http.HybridCacheHandler.ContentStore.AzureBlob"),
+            (Type: typeof(S3ContentStore), AssemblyName: "DamianH.Http.HybridCacheHandler.ContentStore.S3"),
+            (Type: typeof(GoogleCloudStorageContentStore), AssemblyName: "DamianH.Http.HybridCacheHandler.ContentStore.GoogleCloudStorage"),
+            (Type: typeof(FileSystemContentStore), AssemblyName: "DamianH.Http.HybridCacheHandler.ContentStore.FileSystem")
         };
-        foreach (var type in types)
+        foreach (var (type, assemblyName) in types)
         {
             var assembly = type.Assembly;
+            Assert.Equal(assemblyName, assembly.GetName().Name);
+            Assert.StartsWith("DamianH.Http.HybridCacheHandler", type.Namespace);
             Assert.Equal(ExpectedFramework, assembly.GetCustomAttribute<TargetFrameworkAttribute>()?.FrameworkName);
             TestContext.Current.TestOutputHelper!.WriteLine($"{assembly.GetName().Name}: {ExpectedFramework}; {assembly.Location}");
         }

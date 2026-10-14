@@ -3,7 +3,7 @@
 
 using System.Net.Http.Headers;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 internal sealed class CacheKeyGenerator(HttpHybridCacheHandlerOptions options)
 {

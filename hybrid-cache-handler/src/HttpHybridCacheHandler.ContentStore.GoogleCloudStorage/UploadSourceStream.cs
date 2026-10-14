@@ -1,4 +1,4 @@
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 // Presents a fixed-length, zero-based view without transferring ownership to the SDK.
 internal sealed class UploadSourceStream(Stream source, long length) : CompatibleStream

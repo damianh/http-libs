@@ -5,7 +5,7 @@ using System.IO.Compression;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Caching.Hybrid;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 public partial class HttpHybridCacheHandler
 {

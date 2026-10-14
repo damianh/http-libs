@@ -7,7 +7,7 @@ using System.Net.Http.Headers;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 public class ClientConditionalTests
 {

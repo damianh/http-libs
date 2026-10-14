@@ -8,7 +8,7 @@ section: HTTP cache content stores
 
 # Filesystem HTTP cache content store
 
-`DamianH.HttpHybridCacheHandler.ContentStore.FileSystem` implements
+`DamianH.Http.HybridCacheHandler.ContentStore.FileSystem` implements
 `ILargeHttpCacheContentStore` using local files and bounded (64 KiB) streaming
 copies. It depends on the abstractions and Microsoft extensions, not on the
 handler or `FileDistributedCache`. It is independently versioned using
@@ -19,7 +19,7 @@ Retention uses the supplied `TimeProvider` on every target, including fake clock
 Older targets use a coalescing periodic timer based on `TimeProvider.CreateTimer`;
 disposal cancels and joins cleanup just as on .NET 10.
 
-[NuGet](https://www.nuget.org/packages/DamianH.HttpHybridCacheHandler.ContentStore.FileSystem/) |
+[NuGet](https://www.nuget.org/packages/DamianH.Http.HybridCacheHandler.ContentStore.FileSystem/) |
 [Source](https://github.com/damianh/http-libs/tree/main/hybrid-cache-handler/src/HttpHybridCacheHandler.ContentStore.FileSystem)
 
 ## Registration with bounded retention
@@ -27,11 +27,11 @@ disposal cancels and joins cleanup just as on .NET 10.
 Install in the application project directory:
 
 ```powershell
-dotnet add package DamianH.HttpHybridCacheHandler.ContentStore.FileSystem
+dotnet add package DamianH.Http.HybridCacheHandler.ContentStore.FileSystem
 ```
 
 ```csharp
-using DamianH.HttpHybridCacheHandler.ContentStore.FileSystem;
+using DamianH.Http.HybridCacheHandler.ContentStore.FileSystem;
 using System.Diagnostics;
 
 using var process = Process.GetCurrentProcess();

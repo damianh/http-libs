@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <AssemblyName>DamianH.HttpHybridCacheHandler.ContentStore.FileSystem</AssemblyName>
-    <RootNamespace>DamianH.HttpHybridCacheHandler.ContentStore.FileSystem</RootNamespace>
+    <AssemblyName>DamianH.Http.HybridCacheHandler.ContentStore.FileSystem</AssemblyName>
+    <RootNamespace>DamianH.Http.HybridCacheHandler.ContentStore.FileSystem</RootNamespace>
     <MinVerMinimumMajorMinor>0.1</MinVerMinimumMajorMinor>
     <MinVerTagPrefix>cache-filesystem-v</MinVerTagPrefix>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <PackageId>DamianH.HttpHybridCacheHandler.ContentStore.FileSystem</PackageId>
+    <PackageId>DamianH.Http.HybridCacheHandler.ContentStore.FileSystem</PackageId>
     <Authors>Damian Hickey</Authors>
     <Description>Streaming filesystem storage with optional bounded retention for HTTP cache bodies.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

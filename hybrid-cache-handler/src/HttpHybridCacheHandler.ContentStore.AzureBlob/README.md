@@ -1,6 +1,6 @@
 # Azure Blob HTTP cache content store
 
-`DamianH.HttpHybridCacheHandler.ContentStore.AzureBlob` targets `net10.0`,
+`DamianH.Http.HybridCacheHandler.ContentStore.AzureBlob` targets `net10.0`,
 `netstandard2.0`, and `net472` using the official Azure SDK.
 It depends on the independent ContentStore package, not
 the handler or HybridCache; release tags use `cache-azureblob-v`.
@@ -10,13 +10,13 @@ the handler or HybridCache; release tags use `cache-azureblob-v`.
 Install alongside the handler from your application project directory:
 
 ```powershell
-dotnet add package DamianH.HttpHybridCacheHandler.ContentStore.AzureBlob
+dotnet add package DamianH.Http.HybridCacheHandler.ContentStore.AzureBlob
 ```
 
 Given an application-configured `BlobContainerClient`:
 
 ```csharp
-using DamianH.HttpHybridCacheHandler.ContentStore.AzureBlob;
+using DamianH.Http.HybridCacheHandler.ContentStore.AzureBlob;
 
 services.AddSingleton(container);
 services.AddHttpHybridCacheAzureBlobContentStore(

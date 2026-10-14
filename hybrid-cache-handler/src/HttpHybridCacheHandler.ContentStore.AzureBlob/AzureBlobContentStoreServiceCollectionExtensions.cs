@@ -1,7 +1,7 @@
 using Azure.Storage.Blobs;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace DamianH.HttpHybridCacheHandler.ContentStore.AzureBlob;
+namespace DamianH.Http.HybridCacheHandler.ContentStore.AzureBlob;
 
 /// <summary>Registers Azure Blob storage independently of the HTTP handler.</summary>
 public static class AzureBlobContentStoreServiceCollectionExtensions

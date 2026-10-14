@@ -3,7 +3,7 @@
 
 using System.Buffers;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 /// <summary>
 /// A buffer that stores data in segments to avoid Large Object Heap allocations.

@@ -3,7 +3,7 @@
 
 using System.Runtime.InteropServices;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 internal static class PrivateDirectory
 {

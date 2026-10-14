@@ -6,7 +6,7 @@ using System.Net.Http.Headers;
 using DamianH.FileDistributedCache;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 public class ContentSizeLimitTests
 {

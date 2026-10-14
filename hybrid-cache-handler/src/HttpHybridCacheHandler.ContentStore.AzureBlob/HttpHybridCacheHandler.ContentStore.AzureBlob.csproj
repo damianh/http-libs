@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <AssemblyName>DamianH.HttpHybridCacheHandler.ContentStore.AzureBlob</AssemblyName>
-    <RootNamespace>DamianH.HttpHybridCacheHandler.ContentStore.AzureBlob</RootNamespace>
+    <AssemblyName>DamianH.Http.HybridCacheHandler.ContentStore.AzureBlob</AssemblyName>
+    <RootNamespace>DamianH.Http.HybridCacheHandler.ContentStore.AzureBlob</RootNamespace>
     <MinVerMinimumMajorMinor>0.1</MinVerMinimumMajorMinor>
     <MinVerTagPrefix>cache-azureblob-v</MinVerTagPrefix>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <PackageId>DamianH.HttpHybridCacheHandler.ContentStore.AzureBlob</PackageId>
+    <PackageId>DamianH.Http.HybridCacheHandler.ContentStore.AzureBlob</PackageId>
     <Authors>Damian Hickey</Authors>
     <Description>Streaming Azure Blob Storage content store for HTTP caching.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

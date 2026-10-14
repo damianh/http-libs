@@ -1,7 +1,7 @@
 // Copyright (c) Damian Hickey. All rights reserved.
 // See LICENSE in the project root for license information.
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 /// <summary>
 /// Provides constant values for HTTP diagnostic header names used to convey diagnostic or control information in HTTP

@@ -6,8 +6,8 @@ using System.Xml.Linq;
 using Azure;
 using Azure.Core.Pipeline;
 using Azure.Storage.Blobs;
-using DamianH.HttpHybridCacheHandler;
-using DamianH.HttpHybridCacheHandler.ContentStore.AzureBlob;
+using DamianH.Http.HybridCacheHandler;
+using DamianH.Http.HybridCacheHandler.ContentStore.AzureBlob;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace HttpHybridCacheHandler.ContentStore.AzureBlob.Tests;

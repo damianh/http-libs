@@ -5,7 +5,7 @@
     <TargetFrameworks Condition="'$(CompatibilityTargetFramework)' == 'netstandard2.0'">net10.0</TargetFrameworks>
     <OutputType>Exe</OutputType>
     <AssemblyName>HttpHybridCacheHandler.Compatibility.Tests</AssemblyName>
-    <RootNamespace>DamianH.HttpHybridCacheHandler.Compatibility.Tests</RootNamespace>
+    <RootNamespace>DamianH.Http.HybridCacheHandler.Compatibility.Tests</RootNamespace>
     <IsPackable>false</IsPackable>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>

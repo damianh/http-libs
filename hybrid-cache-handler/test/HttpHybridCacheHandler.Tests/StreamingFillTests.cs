@@ -7,7 +7,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 public sealed class StreamingFillTests : IDisposable
 {
@@ -312,7 +312,7 @@ public sealed class StreamingFillTests : IDisposable
         {
             InstrumentPublished = (instrument, meterListener) =>
             {
-                if (instrument.Meter.Name == "DamianH.HttpHybridCacheHandler" &&
+                if (instrument.Meter.Name == "DamianH.Http.HybridCacheHandler" &&
                     instrument.Name == HttpHybridCacheHandler.CacheSizeExceededCounterKey)
                 {
                     meterListener.EnableMeasurementEvents(instrument);

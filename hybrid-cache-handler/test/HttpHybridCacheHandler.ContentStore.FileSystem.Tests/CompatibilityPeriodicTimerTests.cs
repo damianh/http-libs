@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Time.Testing;
 
-namespace DamianH.HttpHybridCacheHandler.ContentStore.FileSystem.Tests;
+namespace DamianH.Http.HybridCacheHandler.ContentStore.FileSystem.Tests;
 
 public sealed class CompatibilityPeriodicTimerTests
 {

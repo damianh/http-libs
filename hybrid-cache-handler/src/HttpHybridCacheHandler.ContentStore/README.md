@@ -1,6 +1,6 @@
 # HTTP cache content-store contracts
 
-`DamianH.HttpHybridCacheHandler.ContentStore` provides provider-independent
+`DamianH.Http.HybridCacheHandler.ContentStore` provides provider-independent
 streaming contracts for the HTTP caching handler and adapters, without a cloud
 SDK or HybridCache dependency.
 
@@ -17,7 +17,7 @@ for header behavior and actual-runtime testing limitations.
 Install from your project directory:
 
 ```powershell
-dotnet add package DamianH.HttpHybridCacheHandler.ContentStore
+dotnet add package DamianH.Http.HybridCacheHandler.ContentStore
 ```
 
 Given a configured `IHttpCacheContentStore`:

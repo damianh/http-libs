@@ -10,7 +10,7 @@ using System.Text;
 using Shouldly;
 using Xunit;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 public class CompatibilityPrimitiveTests
 {

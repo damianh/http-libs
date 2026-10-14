@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Caching.Hybrid;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 /// <summary>
 /// HybridCache-backed store for cached HTTP response content.

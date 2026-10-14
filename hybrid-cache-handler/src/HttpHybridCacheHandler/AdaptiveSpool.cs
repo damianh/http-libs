@@ -3,7 +3,7 @@
 
 using System.Security.Cryptography;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 internal sealed class SpoolBudgetExceededException() : IOException("The HTTP cache staging budget was exhausted.");
 

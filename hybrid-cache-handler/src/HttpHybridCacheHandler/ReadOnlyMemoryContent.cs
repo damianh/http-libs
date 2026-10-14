@@ -3,7 +3,7 @@
 
 using System.Net;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 /// <summary>
 /// HttpContent implementation that wraps ReadOnlyMemory to avoid byte array copying.

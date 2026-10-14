@@ -1,6 +1,6 @@
 # Filesystem HTTP cache content store
 
-`DamianH.HttpHybridCacheHandler.ContentStore.FileSystem` stores large HTTP cache
+`DamianH.Http.HybridCacheHandler.ContentStore.FileSystem` stores large HTTP cache
 bodies using local files and bounded 64 KiB streaming copies. It is independent
 of the handler and FileDistributedCache, with `cache-filesystem-v` release tags.
 
@@ -13,11 +13,11 @@ coalescing timer and is cancelled and joined on disposal.
 Install from your application project directory:
 
 ```powershell
-dotnet add package DamianH.HttpHybridCacheHandler.ContentStore.FileSystem
+dotnet add package DamianH.Http.HybridCacheHandler.ContentStore.FileSystem
 ```
 
 ```csharp
-using DamianH.HttpHybridCacheHandler.ContentStore.FileSystem;
+using DamianH.Http.HybridCacheHandler.ContentStore.FileSystem;
 using System.Diagnostics;
 
 using var process = Process.GetCurrentProcess();

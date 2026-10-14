@@ -3,7 +3,7 @@
 
 using System.Net;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 public class ResponseDirectivesTests
 {

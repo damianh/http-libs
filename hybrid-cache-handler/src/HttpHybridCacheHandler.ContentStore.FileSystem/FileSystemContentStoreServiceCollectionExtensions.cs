@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
-namespace DamianH.HttpHybridCacheHandler.ContentStore.FileSystem;
+namespace DamianH.Http.HybridCacheHandler.ContentStore.FileSystem;
 
 /// <summary>Dependency injection registration for the filesystem large-body store.</summary>
 public static class FileSystemContentStoreServiceCollectionExtensions

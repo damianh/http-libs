@@ -1,5 +1,5 @@
 using Azure.Storage.Blobs;
-using DamianH.HttpHybridCacheHandler.ContentStore.AzureBlob;
+using DamianH.Http.HybridCacheHandler.ContentStore.AzureBlob;
 
 namespace HttpHybridCacheHandler.ContentStore.AzureBlob.Tests;
 

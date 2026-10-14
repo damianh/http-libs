@@ -4,7 +4,7 @@ using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 
-namespace DamianH.HttpHybridCacheHandler.Compatibility.Tests;
+namespace DamianH.Http.HybridCacheHandler.Compatibility.Tests;
 
 internal sealed class CacheFixture : IDisposable
 {

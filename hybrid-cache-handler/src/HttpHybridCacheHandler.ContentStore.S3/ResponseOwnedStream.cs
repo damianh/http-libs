@@ -1,6 +1,6 @@
 using Amazon.S3.Model;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 internal sealed class ResponseOwnedStream(GetObjectResponse response) : CompatibleStream
 {

@@ -1,4 +1,4 @@
-namespace DamianH.HttpHybridCacheHandler.ContentStore.FileSystem;
+namespace DamianH.Http.HybridCacheHandler.ContentStore.FileSystem;
 
 /// <summary>Configures storage of opaque HTTP cache bodies on a private local filesystem.</summary>
 public sealed class FileSystemContentStoreOptions

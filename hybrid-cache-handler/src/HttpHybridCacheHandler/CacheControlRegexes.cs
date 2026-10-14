@@ -3,7 +3,7 @@
 
 using System.Text.RegularExpressions;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 /// <summary>
 /// Cached regexes for cache-control parsing.

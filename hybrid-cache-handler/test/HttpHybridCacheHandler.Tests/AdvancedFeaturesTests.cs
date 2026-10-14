@@ -4,7 +4,7 @@
 using System.Diagnostics.Metrics;
 using System.Net;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 public class AdvancedFeaturesTests
 {
@@ -303,7 +303,7 @@ public class AdvancedFeaturesTests
 
         meterListener.InstrumentPublished = (instrument, _) =>
         {
-            if (instrument.Meter.Name == "DamianH.HttpHybridCacheHandler")
+            if (instrument.Meter.Name == "DamianH.Http.HybridCacheHandler")
             {
                 meterFound = true;
                 instrumentNames.Add(instrument.Name);
@@ -383,7 +383,7 @@ public class AdvancedFeaturesTests
 
         meterListener.InstrumentPublished = (instrument, listener) =>
         {
-            if (instrument.Meter.Name == "DamianH.HttpHybridCacheHandler")
+            if (instrument.Meter.Name == "DamianH.Http.HybridCacheHandler")
             {
                 listener.EnableMeasurementEvents(instrument);
             }
@@ -437,7 +437,7 @@ public class AdvancedFeaturesTests
 
         meterListener.InstrumentPublished = (instrument, listener) =>
         {
-            if (instrument.Meter.Name == "DamianH.HttpHybridCacheHandler")
+            if (instrument.Meter.Name == "DamianH.Http.HybridCacheHandler")
             {
                 listener.EnableMeasurementEvents(instrument);
             }
@@ -479,7 +479,7 @@ public class AdvancedFeaturesTests
 
         meterListener.InstrumentPublished = (instrument, listener) =>
         {
-            if (instrument.Meter.Name == "DamianH.HttpHybridCacheHandler")
+            if (instrument.Meter.Name == "DamianH.Http.HybridCacheHandler")
             {
                 listener.EnableMeasurementEvents(instrument);
             }

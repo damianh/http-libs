@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 
-namespace DamianH.HttpHybridCacheHandler.ContentStore.FileSystem.Tests;
+namespace DamianH.Http.HybridCacheHandler.ContentStore.FileSystem.Tests;
 
 public sealed class FileSystemContentStoreTests : IDisposable
 {

@@ -1,6 +1,6 @@
 # Google Cloud Storage HTTP cache content store
 
-`DamianH.HttpHybridCacheHandler.ContentStore.GoogleCloudStorage` targets `net10.0`,
+`DamianH.Http.HybridCacheHandler.ContentStore.GoogleCloudStorage` targets `net10.0`,
 `netstandard2.0`, and `net472` using the official Google SDK and independent
 content-store contracts.
 Release tags use `cache-gcs-v`.
@@ -10,11 +10,11 @@ Release tags use `cache-gcs-v`.
 Install from your application project directory:
 
 ```powershell
-dotnet add package DamianH.HttpHybridCacheHandler.ContentStore.GoogleCloudStorage
+dotnet add package DamianH.Http.HybridCacheHandler.ContentStore.GoogleCloudStorage
 ```
 
 ```csharp
-using DamianH.HttpHybridCacheHandler;
+using DamianH.Http.HybridCacheHandler;
 using Google.Cloud.Storage.V1;
 
 services.AddSingleton<StorageClient>(StorageClient.Create());

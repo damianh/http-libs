@@ -3,10 +3,10 @@ using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 #if NETSTANDARD2_0 || NETFRAMEWORK
-using PeriodicTimer = DamianH.HttpHybridCacheHandler.ContentStore.FileSystem.CompatibilityPeriodicTimer;
+using PeriodicTimer = DamianH.Http.HybridCacheHandler.ContentStore.FileSystem.CompatibilityPeriodicTimer;
 #endif
 
-namespace DamianH.HttpHybridCacheHandler.ContentStore.FileSystem;
+namespace DamianH.Http.HybridCacheHandler.ContentStore.FileSystem;
 
 /// <summary>Stores complete HTTP cache bodies using streamed writes and atomic local-file replacement.</summary>
 /// <remarks>

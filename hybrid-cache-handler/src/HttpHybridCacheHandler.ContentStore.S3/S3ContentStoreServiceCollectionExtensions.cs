@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 /// <summary>Registers the optional Amazon S3 large-body store without depending on the handler.</summary>
 public static class S3ContentStoreServiceCollectionExtensions

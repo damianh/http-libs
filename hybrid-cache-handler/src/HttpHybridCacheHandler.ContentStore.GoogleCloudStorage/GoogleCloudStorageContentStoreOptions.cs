@@ -1,4 +1,4 @@
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 /// <summary>Configures an existing Google Cloud Storage cache namespace.</summary>
 public sealed class GoogleCloudStorageContentStoreOptions

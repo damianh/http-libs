@@ -1,4 +1,4 @@
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 /// <summary>Controls the S3 namespace and bounded, sequential upload strategy.</summary>
 public sealed class S3ContentStoreOptions

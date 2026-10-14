@@ -4,12 +4,12 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 internal static class CacheMetrics
 {
     private static readonly Meter Meter = new(
-        "DamianH.HttpHybridCacheHandler",
+        "DamianH.Http.HybridCacheHandler",
         typeof(HttpHybridCacheHandler).Assembly.GetName().Version?.ToString() ?? "1.0.0");
 
     internal static readonly Counter<long> CacheHits = Meter.CreateCounter<long>(

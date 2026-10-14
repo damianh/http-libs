@@ -5,7 +5,7 @@ using Google;
 using Google.Cloud.Storage.V1;
 using StorageObject = Google.Apis.Storage.v1.Data.Object;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 /// <summary>Stores opaque response bytes in an existing Google Cloud Storage bucket.</summary>
 /// <remarks>The injected client remains application-owned. Tags are advisory and are not persisted.</remarks>

@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <AssemblyName>DamianH.HttpHybridCacheHandler.ContentStore.GoogleCloudStorage</AssemblyName>
-    <RootNamespace>DamianH.HttpHybridCacheHandler</RootNamespace>
+    <AssemblyName>DamianH.Http.HybridCacheHandler.ContentStore.GoogleCloudStorage</AssemblyName>
+    <RootNamespace>DamianH.Http.HybridCacheHandler</RootNamespace>
     <MinVerMinimumMajorMinor>0.1</MinVerMinimumMajorMinor>
     <MinVerTagPrefix>cache-gcs-v</MinVerTagPrefix>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <PackageId>DamianH.HttpHybridCacheHandler.ContentStore.GoogleCloudStorage</PackageId>
+    <PackageId>DamianH.Http.HybridCacheHandler.ContentStore.GoogleCloudStorage</PackageId>
     <Authors>Damian Hickey</Authors>
     <Description>Streaming Google Cloud Storage content store for HTTP caching.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

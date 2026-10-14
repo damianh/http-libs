@@ -4,7 +4,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 public class MinFreshTests
 {

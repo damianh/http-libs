@@ -3,7 +3,7 @@
 
 using System.Globalization;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 internal static class VaryMatcher
 {

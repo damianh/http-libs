@@ -1,9 +1,9 @@
-using DamianH.HttpHybridCacheHandler.ContentStore.FileSystem;
+using DamianH.Http.HybridCacheHandler.ContentStore.FileSystem;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 
-namespace DamianH.HttpHybridCacheHandler.Compatibility.Tests;
+namespace DamianH.Http.HybridCacheHandler.Compatibility.Tests;
 
 public sealed class FileSystemCompatibilityTests : IDisposable
 {

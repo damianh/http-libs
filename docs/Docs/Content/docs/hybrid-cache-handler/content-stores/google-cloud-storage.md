@@ -8,13 +8,13 @@ section: HTTP cache content stores
 
 # Google Cloud Storage HTTP cache content store
 
-`DamianH.HttpHybridCacheHandler.ContentStore.GoogleCloudStorage` targets `net10.0`,
+`DamianH.Http.HybridCacheHandler.ContentStore.GoogleCloudStorage` targets `net10.0`,
 `netstandard2.0`, and `net472` (.NET Framework 4.7.2+)
 and uses the official `Google.Cloud.Storage.V1` **4.15.0** SDK. It depends on the
 content-store abstractions, not the HTTP handler. Its independent release tag
 prefix is `cache-gcs-v`.
 
-[NuGet](https://www.nuget.org/packages/DamianH.HttpHybridCacheHandler.ContentStore.GoogleCloudStorage/) |
+[NuGet](https://www.nuget.org/packages/DamianH.Http.HybridCacheHandler.ContentStore.GoogleCloudStorage/) |
 [Source](https://github.com/damianh/http-libs/tree/main/hybrid-cache-handler/src/HttpHybridCacheHandler.ContentStore.GoogleCloudStorage)
 
 ## Registration
@@ -22,11 +22,11 @@ prefix is `cache-gcs-v`.
 Install in the application project directory:
 
 ```powershell
-dotnet add package DamianH.HttpHybridCacheHandler.ContentStore.GoogleCloudStorage
+dotnet add package DamianH.Http.HybridCacheHandler.ContentStore.GoogleCloudStorage
 ```
 
 ```csharp
-using DamianH.HttpHybridCacheHandler;
+using DamianH.Http.HybridCacheHandler;
 using Google.Cloud.Storage.V1;
 using Microsoft.Extensions.DependencyInjection;
 

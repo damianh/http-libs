@@ -1,6 +1,6 @@
 using Google.Cloud.Storage.V1;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 public class GoogleCloudStorageContentStoreIntegrationTests
 {

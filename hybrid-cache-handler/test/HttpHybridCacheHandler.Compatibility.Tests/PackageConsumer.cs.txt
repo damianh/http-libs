@@ -6,9 +6,9 @@ using System.Reflection;
 using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
-using DamianH.HttpHybridCacheHandler;
-using DamianH.HttpHybridCacheHandler.ContentStore.AzureBlob;
-using DamianH.HttpHybridCacheHandler.ContentStore.FileSystem;
+using DamianH.Http.HybridCacheHandler;
+using DamianH.Http.HybridCacheHandler.ContentStore.AzureBlob;
+using DamianH.Http.HybridCacheHandler.ContentStore.FileSystem;
 using Microsoft.Extensions.DependencyInjection;
 
 internal static class Program

@@ -44,7 +44,7 @@ jobs:
             filesystem)   suffix=".ContentStore.FileSystem"; tag="cache-filesystem-v" ;;
             *) echo "Unknown package selection: $PACKAGE"; exit 1 ;;
           esac
-          echo "package-id=DamianH.HttpHybridCacheHandler$suffix" >> "$GITHUB_OUTPUT"
+          echo "package-id=DamianH.Http.HybridCacheHandler$suffix" >> "$GITHUB_OUTPUT"
           echo "tag-prefix=$tag" >> "$GITHUB_OUTPUT"
           echo "pack-target=pack-$PACKAGE" >> "$GITHUB_OUTPUT"
           echo "artifact-directory=artifacts/$PACKAGE" >> "$GITHUB_OUTPUT"

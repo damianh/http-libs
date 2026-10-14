@@ -1,7 +1,7 @@
 #if STANDARD_ASSETS || NETFRAMEWORK
 using System.Net;
 
-namespace DamianH.HttpHybridCacheHandler.Compatibility.Tests;
+namespace DamianH.Http.HybridCacheHandler.Compatibility.Tests;
 
 public sealed class HttpContentCompatibilityTests
 {

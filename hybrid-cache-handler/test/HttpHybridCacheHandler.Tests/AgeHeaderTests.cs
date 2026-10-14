@@ -4,7 +4,7 @@
 using System.Globalization;
 using System.Net;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 [Collection(CultureSensitiveTestCollection.Name)]
 public class AgeHeaderTests

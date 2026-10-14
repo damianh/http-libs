@@ -4,7 +4,7 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using Microsoft.Extensions.Options;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 /// <summary>Stores opaque HTTP cache bodies in an existing Amazon S3 bucket.</summary>
 public sealed class S3ContentStore : ILargeHttpCacheContentStore

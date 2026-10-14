@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 internal static partial class Log
 {

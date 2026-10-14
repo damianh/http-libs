@@ -1,7 +1,7 @@
 // Copyright (c) Damian Hickey. All rights reserved.
 // See LICENSE in the project root for license information.
 
-using DamianH.HttpHybridCacheHandler;
+using DamianH.Http.HybridCacheHandler;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Caching.Memory;
@@ -27,7 +27,7 @@ public static class ServiceCollectionExtensions
     ///     The service key used to register the keyed <see cref="HybridCache"/> instance
     ///     dedicated to <see cref="HttpHybridCacheHandler"/>.
     /// </summary>
-    public const string HybridCacheKey = "DamianH.HttpHybridCacheHandler";
+    public const string HybridCacheKey = "DamianH.Http.HybridCacheHandler";
 
     extension(IServiceCollection serviceCollection)
     {

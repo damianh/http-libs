@@ -5,7 +5,7 @@ using System.Globalization;
 using System.Net;
 using Microsoft.Extensions.Caching.Hybrid;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 public class VaryTests
 {

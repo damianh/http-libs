@@ -1,4 +1,4 @@
-namespace DamianH.HttpHybridCacheHandler.ContentStore.AzureBlob;
+namespace DamianH.Http.HybridCacheHandler.ContentStore.AzureBlob;
 
 /// <summary>Configures the isolated Azure Blob cache namespace.</summary>
 public sealed class AzureBlobContentStoreOptions

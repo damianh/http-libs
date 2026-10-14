@@ -1,4 +1,4 @@
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 /// <summary>
 /// Indicates an operational content-store failure without requiring callers to reference a provider SDK.

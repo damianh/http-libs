@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <AssemblyName>DamianH.HttpHybridCacheHandler.ContentStore.S3</AssemblyName>
-    <RootNamespace>DamianH.HttpHybridCacheHandler</RootNamespace>
+    <AssemblyName>DamianH.Http.HybridCacheHandler.ContentStore.S3</AssemblyName>
+    <RootNamespace>DamianH.Http.HybridCacheHandler</RootNamespace>
     <MinVerMinimumMajorMinor>0.1</MinVerMinimumMajorMinor>
     <MinVerTagPrefix>cache-s3-v</MinVerTagPrefix>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <PackageId>DamianH.HttpHybridCacheHandler.ContentStore.S3</PackageId>
+    <PackageId>DamianH.Http.HybridCacheHandler.ContentStore.S3</PackageId>
     <Authors>Damian Hickey</Authors>
     <Description>Streaming Amazon S3 content storage for HTTP HybridCache using the official AWS SDK.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

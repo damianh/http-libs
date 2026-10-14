@@ -5,7 +5,7 @@
 using System.Buffers;
 using System.Runtime.InteropServices;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 internal static class StreamCompatibility
 {

@@ -12,12 +12,12 @@ $frameworks = @{
     'net472' = @('net472', '.NETFramework4.7.2')
 }
 $names = @(
-    'DamianH.HttpHybridCacheHandler',
-    'DamianH.HttpHybridCacheHandler.ContentStore',
-    'DamianH.HttpHybridCacheHandler.ContentStore.AzureBlob',
-    'DamianH.HttpHybridCacheHandler.ContentStore.S3',
-    'DamianH.HttpHybridCacheHandler.ContentStore.GoogleCloudStorage',
-    'DamianH.HttpHybridCacheHandler.ContentStore.FileSystem'
+    'DamianH.Http.HybridCacheHandler',
+    'DamianH.Http.HybridCacheHandler.ContentStore',
+    'DamianH.Http.HybridCacheHandler.ContentStore.AzureBlob',
+    'DamianH.Http.HybridCacheHandler.ContentStore.S3',
+    'DamianH.Http.HybridCacheHandler.ContentStore.GoogleCloudStorage',
+    'DamianH.Http.HybridCacheHandler.ContentStore.FileSystem'
 )
 
 foreach ($file in Get-ChildItem $ArtifactsPath -Filter '*.nupkg' -Recurse) {
@@ -47,11 +47,11 @@ foreach ($file in Get-ChildItem $ArtifactsPath -Filter '*.nupkg' -Recurse) {
                     throw "$id leaked build-only dependency $($dependency.id)"
                 }
             }
-            if ($id -ne 'DamianH.HttpHybridCacheHandler.ContentStore' -and
-                -not ($groups[0].dependency | Where-Object id -EQ 'DamianH.HttpHybridCacheHandler.ContentStore')) {
+            if ($id -ne 'DamianH.Http.HybridCacheHandler.ContentStore' -and
+                -not ($groups[0].dependency | Where-Object id -EQ 'DamianH.Http.HybridCacheHandler.ContentStore')) {
                 throw "$id is missing the ContentStore dependency for $tfm"
             }
-            foreach ($dependency in $groups[0].dependency | Where-Object id -EQ 'DamianH.HttpHybridCacheHandler.ContentStore') {
+            foreach ($dependency in $groups[0].dependency | Where-Object id -EQ 'DamianH.Http.HybridCacheHandler.ContentStore') {
                 [void] $contractFloors.Add(([string] $dependency.version).TrimStart('[').Split(',')[0].TrimEnd(']'))
             }
         }
@@ -75,7 +75,7 @@ try {
     foreach ($package in $packages.Values) { Copy-Item $package.Path $feed }
     $consumerVersions = @{}
     foreach ($id in $names) { $consumerVersions[$id] = $packages[$id].Version }
-    $contractId = 'DamianH.HttpHybridCacheHandler.ContentStore'
+    $contractId = 'DamianH.Http.HybridCacheHandler.ContentStore'
     $floor = @($contractFloors | Sort-Object { [version] $_ } -Descending)[0]
     $builtVersion = $consumerVersions[$contractId]
     if ([version]($builtVersion.Split('-')[0]) -lt [version]$floor -or
@@ -95,7 +95,7 @@ try {
   <packageSources><clear /><add key="local" value="$escapedFeed" /><add key="nuget.org" value="https://api.nuget.org/v3/index.json" /></packageSources>
   <packageSourceMapping>
     <clear />
-    <packageSource key="local"><package pattern="DamianH.HttpHybridCacheHandler*" /></packageSource>
+    <packageSource key="local"><package pattern="DamianH.Http.HybridCacheHandler*" /></packageSource>
     <packageSource key="nuget.org"><package pattern="*" /></packageSource>
   </packageSourceMapping>
 </configuration>

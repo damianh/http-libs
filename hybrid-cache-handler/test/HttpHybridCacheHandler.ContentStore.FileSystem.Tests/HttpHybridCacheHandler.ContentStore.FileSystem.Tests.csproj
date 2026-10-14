@@ -2,7 +2,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <AssemblyName>HttpHybridCacheHandler.ContentStore.FileSystem.Tests</AssemblyName>
-    <RootNamespace>DamianH.HttpHybridCacheHandler.ContentStore.FileSystem.Tests</RootNamespace>
+    <RootNamespace>DamianH.Http.HybridCacheHandler.ContentStore.FileSystem.Tests</RootNamespace>
     <IsPackable>false</IsPackable>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
