@@ -21,7 +21,8 @@ or renaming a protocol test.
 |---|---|---|
 | §7.6.1 | Remove headers named in `Connection` (requests and responses) | `HttpForwardingTests.StripsHeadersNamedInConnection`, `StripsConnectionOptionsWhenCloseIsAlsoPresent`, `StripsMixedConnectionOptionsAcrossKeepAliveRequests`, `StripsMixedConnectionOptionsAfterARejectedUpgrade`; `Http1RequestHeadObserverTests.*` |
 | §7.6.1 | Do not forward fixed hop-by-hop fields (`Proxy-Connection`, `Keep-Alive`, `TE`, `HTTP2-Settings`) | `HttpForwardingTests.DoesNotForwardHopByHopRequestHeaders`, `HttpForwardingTests.ForwardsAbsoluteFormRequests` |
-| §7.6.3 | Add `Via` with the received protocol version, append to existing values, on requests and responses | `HttpForwardingTests.ForwardsAbsoluteFormRequests`, `AppendsToReceivedViaHeaders`, `ForwardsWebSocketUpgrades` |
+| §7.6.3 | Add `Via` with the received protocol version, append to existing values, on requests and responses | `HttpForwardingTests.ForwardsAbsoluteFormRequests`, `AppendsToReceivedViaHeaders`, `ForwardsWebSocketUpgrades`, `UsesTheConfiguredProxyNameInVia` |
+| §7.6.3 | Reject a request whose `Via` shows it already passed through this proxy (loop); forward other proxies' entries | `HttpForwardingTests.RejectsForwardingLoopsWithoutContactingTheOrigin`, `ForwardsWhenViaNamesOtherProxies`, `ForwardsLoopsWhenDetectionIsDisabled`; `ViaHeaderTests.*` |
 | §7.8 | Forward `Upgrade` (WebSocket only) and relay after `101` | `HttpForwardingTests.ForwardsWebSocketUpgrades`, `StripsMixedConnectionOptionsAfterARejectedUpgrade`; `TlsInterceptionTests.RelaysWebSocketsInsideTheTunnel` |
 | §6.6.2 | Do not advertise trailer fields that are not forwarded | `HttpForwardingTests.DoesNotAdvertiseRequestTrailersItDrops`, `DoesNotAdvertiseResponseTrailersItDrops` |
 | §9.3.6 | `CONNECT` uses authority-form with a port; reject content; `2xx` switches to a tunnel; restrict ports | `ConnectTunnelTests.TunnelsBytesIncludingEarlyDataAndPropagatesHalfClose`, `RejectsMalformedRequests`, `BlocksDisallowedPorts`; `ConnectRequestParserTests.RejectsMalformedRequests`, `AllowsZeroContentLength`; `AuthorityParserTests.*`; `DestinationPolicyTests.DefaultPortsAllow443ForConnectAnd80ForHttp` |
@@ -68,7 +69,7 @@ available.
 | Error type | Tests |
 |---|---|
 | `destination_ip_prohibited` | `ConnectTunnelTests.BlocksLoopbackByDefault`, `HttpForwardingTests.DoesNotRouteAbsoluteFormRequestsToTheProxyApplication`, `Http2ConnectTests.ReportsDeniedTunnelsOverHttp2`, `DestinationPolicyTests.NonPublicIpLiteralsFailFast` |
-| `http_request_denied` | `ConnectTunnelTests.BlocksDisallowedPorts`, `CustomFiltersCanDenyDestinations`; `HttpForwardingTests.RejectsDisallowedHttpPorts`; `TlsInterceptionTests.RejectsRequestsForAnotherHost` |
+| `http_request_denied` | `ConnectTunnelTests.BlocksDisallowedPorts`, `CustomFiltersCanDenyDestinations`; `HttpForwardingTests.RejectsDisallowedHttpPorts`, `RejectsForwardingLoopsWithoutContactingTheOrigin`; `TlsInterceptionTests.RejectsRequestsForAnotherHost` |
 | `http_request_error` | `HttpForwardingTests.RejectsAbsoluteFormHttpsTargets` |
 | `connection_refused` | `ConnectTunnelTests.ReportsRefusedConnections`, `HttpForwardingTests.ReportsUnreachableOrigins` |
 | `connection_limit_reached` | `ConnectTunnelTests.LimitsConcurrentTunnels` |
@@ -86,8 +87,6 @@ Not implemented:
 
 - **`Max-Forwards`** (RFC 9110 §7.6.2): the proxy does not check or decrement
   `Max-Forwards` on `TRACE` or `OPTIONS`; it is forwarded unchanged.
-- **`Via` loop detection**: the proxy does not reject requests whose `Via`
-  already contains its own name.
 
 Implemented but not covered by a test:
 
