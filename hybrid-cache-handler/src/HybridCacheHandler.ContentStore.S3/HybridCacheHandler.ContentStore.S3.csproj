@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>DamianH.Http.HybridCacheHandler.ContentStore.S3</AssemblyName>
+    <RootNamespace>DamianH.Http.HybridCacheHandler</RootNamespace>
+    <MinVerMinimumMajorMinor>0.1</MinVerMinimumMajorMinor>
+    <MinVerTagPrefix>cache-s3-v</MinVerTagPrefix>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PackageId>DamianH.Http.HybridCacheHandler.ContentStore.S3</PackageId>
+    <Authors>Damian Hickey</Authors>
+    <Description>Streaming Amazon S3 content storage for HTTP HybridCache using the official AWS SDK.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/damianh/http-libs</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+    <PackageReference Include="AWSSDK.S3" Version="4.0.102.5" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.10" />
+    <PackageReference Include="MinVer" Version="7.0.0" PrivateAssets="all" />
+    <ProjectReference Include="..\HybridCacheHandler.ContentStore\HybridCacheHandler.ContentStore.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' != 'net10.0'">
+    <PackageReference Include="System.Memory" Version="4.6.3" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.10" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
+    <Reference Include="System.Net.Http" />
+  </ItemGroup>
+</Project>

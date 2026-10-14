@@ -4,7 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 internal static class Guard
 {

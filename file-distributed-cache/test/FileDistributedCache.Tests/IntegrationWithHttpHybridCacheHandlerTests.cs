@@ -3,6 +3,7 @@
 
 using System.Net;
 using System.Net.Http.Headers;
+using DamianH.Http.HybridCacheHandler;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -12,7 +13,7 @@ namespace DamianH.FileDistributedCache;
 
 /// <summary>
 /// End-to-end tests demonstrating that <see cref="FileDistributedCache"/> works as the L2
-/// backend for <see cref="HttpHybridCacheHandler.HttpHybridCacheHandler"/>.
+/// backend for <see cref="HttpHybridCacheHandler"/>.
 /// </summary>
 public sealed class IntegrationWithHttpHybridCacheHandlerTests : IDisposable
 {
@@ -145,7 +146,7 @@ public sealed class IntegrationWithHttpHybridCacheHandlerTests : IDisposable
             .AddHttpHybridCacheHandler(_ => { })
             .AddHttpClient("CachingClient")
             .ConfigurePrimaryHttpMessageHandler(_ => innerHandler)
-            .AddHttpMessageHandler(sp => sp.GetRequiredService<HttpHybridCacheHandler.HttpHybridCacheHandler>())
+            .AddHttpMessageHandler(sp => sp.GetRequiredService<HttpHybridCacheHandler>())
             .Services
             .BuildServiceProvider();
 

@@ -13,11 +13,11 @@ body store:
 
 | Package | Backend | Guide |
 | --- | --- | --- |
-| `DamianH.HttpHybridCacheHandler.ContentStore` | Provider-independent streaming contracts, no cloud SDK dependency | This page |
-| `DamianH.HttpHybridCacheHandler.ContentStore.AzureBlob` | Official `Azure.Storage.Blobs` SDK | [Azure Blob](/docs/hybrid-cache-handler/content-stores/azure-blob/) |
-| `DamianH.HttpHybridCacheHandler.ContentStore.S3` | Official `AWSSDK.S3` SDK | [Amazon S3](/docs/hybrid-cache-handler/content-stores/s3/) |
-| `DamianH.HttpHybridCacheHandler.ContentStore.GoogleCloudStorage` | Official `Google.Cloud.Storage.V1` SDK | [Google Cloud Storage](/docs/hybrid-cache-handler/content-stores/google-cloud-storage/) |
-| `DamianH.HttpHybridCacheHandler.ContentStore.FileSystem` | Native file streams, no cloud SDK | [Filesystem](/docs/hybrid-cache-handler/content-stores/file-system/) |
+| `DamianH.Http.HybridCacheHandler.ContentStore` | Provider-independent streaming contracts, no cloud SDK dependency | This page |
+| `DamianH.Http.HybridCacheHandler.ContentStore.AzureBlob` | Official `Azure.Storage.Blobs` SDK | [Azure Blob](/docs/hybrid-cache-handler/content-stores/azure-blob/) |
+| `DamianH.Http.HybridCacheHandler.ContentStore.S3` | Official `AWSSDK.S3` SDK | [Amazon S3](/docs/hybrid-cache-handler/content-stores/s3/) |
+| `DamianH.Http.HybridCacheHandler.ContentStore.GoogleCloudStorage` | Official `Google.Cloud.Storage.V1` SDK | [Google Cloud Storage](/docs/hybrid-cache-handler/content-stores/google-cloud-storage/) |
+| `DamianH.Http.HybridCacheHandler.ContentStore.FileSystem` | Native file streams, no cloud SDK | [Filesystem](/docs/hybrid-cache-handler/content-stores/file-system/) |
 
 Adapters depend on ContentStore, not on the handler or HybridCache. Configure
 credentials, endpoints, and retries through an injected SDK client. Registration
@@ -26,7 +26,7 @@ FluentStorage are not dependencies.
 
 ## Independent contracts
 
-`DamianH.HttpHybridCacheHandler.ContentStore` provides provider-independent
+`DamianH.Http.HybridCacheHandler.ContentStore` provides provider-independent
 contracts for the handler and adapters. No cloud SDK or HybridCache dependency
 is required to implement a store.
 
@@ -40,11 +40,11 @@ HybridCache support warning; the contracts themselves do not depend on HybridCac
 Install in the application or adapter project directory:
 
 ```powershell
-dotnet add package DamianH.HttpHybridCacheHandler.ContentStore
+dotnet add package DamianH.Http.HybridCacheHandler.ContentStore
 ```
 
-[NuGet](https://www.nuget.org/packages/DamianH.HttpHybridCacheHandler.ContentStore/) |
-[Contract source](https://github.com/damianh/http-libs/tree/main/hybrid-cache-handler/src/HttpHybridCacheHandler.ContentStore)
+[NuGet](https://www.nuget.org/packages/DamianH.Http.HybridCacheHandler.ContentStore/) |
+[Contract source](https://github.com/damianh/http-libs/tree/main/hybrid-cache-handler/src/HybridCacheHandler.ContentStore)
 
 `IHttpCacheContentStore` provides complete streaming writes, independently owned
 read streams, and single-key removal. `ILargeHttpCacheContentStore` identifies the

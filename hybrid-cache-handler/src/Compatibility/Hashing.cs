@@ -3,7 +3,7 @@
 
 using System.Security.Cryptography;
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 internal static class Hashing
 {

@@ -2,7 +2,7 @@
 
 using System.Net;
 using BenchmarkDotNet.Attributes;
-using DamianH.HttpHybridCacheHandler;
+using DamianH.Http.HybridCacheHandler;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;

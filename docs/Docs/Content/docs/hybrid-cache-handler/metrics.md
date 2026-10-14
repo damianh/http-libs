@@ -9,7 +9,7 @@ section: HTTP hybrid caching
 # HTTP cache metrics
 
 The handler emits counters via `System.Diagnostics.Metrics` under the meter
-`DamianH.HttpHybridCacheHandler`:
+`DamianH.Http.HybridCacheHandler`:
 
 | Counter | Description |
 | --- | --- |

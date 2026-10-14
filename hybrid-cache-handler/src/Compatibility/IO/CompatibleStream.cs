@@ -1,7 +1,7 @@
 // Copyright (c) Damian Hickey. All rights reserved.
 // See LICENSE in the project root for license information.
 
-namespace DamianH.HttpHybridCacheHandler;
+namespace DamianH.Http.HybridCacheHandler;
 
 internal abstract class CompatibleStream : Stream
 #if NETSTANDARD2_0 || NETFRAMEWORK

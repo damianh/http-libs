@@ -10,7 +10,7 @@
           AfterTargets="_GetProjectReferenceVersions">
     <ItemGroup>
       <_ProjectReferencesWithVersions Update="@(_ProjectReferencesWithVersions)"
-          Condition="'%(_ProjectReferencesWithVersions.Filename)' == 'HttpHybridCacheHandler.ContentStore'">
+          Condition="'%(_ProjectReferencesWithVersions.Filename)' == 'HybridCacheHandler.ContentStore'">
         <ProjectVersion>$(HttpCacheContentStorePackageVersion)</ProjectVersion>
       </_ProjectReferencesWithVersions>
     </ItemGroup>

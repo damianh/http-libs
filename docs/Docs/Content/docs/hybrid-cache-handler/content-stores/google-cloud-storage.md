@@ -8,25 +8,25 @@ section: HTTP cache content stores
 
 # Google Cloud Storage HTTP cache content store
 
-`DamianH.HttpHybridCacheHandler.ContentStore.GoogleCloudStorage` targets `net10.0`,
+`DamianH.Http.HybridCacheHandler.ContentStore.GoogleCloudStorage` targets `net10.0`,
 `netstandard2.0`, and `net472` (.NET Framework 4.7.2+)
 and uses the official `Google.Cloud.Storage.V1` **4.15.0** SDK. It depends on the
 content-store abstractions, not the HTTP handler. Its independent release tag
 prefix is `cache-gcs-v`.
 
-[NuGet](https://www.nuget.org/packages/DamianH.HttpHybridCacheHandler.ContentStore.GoogleCloudStorage/) |
-[Source](https://github.com/damianh/http-libs/tree/main/hybrid-cache-handler/src/HttpHybridCacheHandler.ContentStore.GoogleCloudStorage)
+[NuGet](https://www.nuget.org/packages/DamianH.Http.HybridCacheHandler.ContentStore.GoogleCloudStorage/) |
+[Source](https://github.com/damianh/http-libs/tree/main/hybrid-cache-handler/src/HybridCacheHandler.ContentStore.GoogleCloudStorage)
 
 ## Registration
 
 Install in the application project directory:
 
 ```powershell
-dotnet add package DamianH.HttpHybridCacheHandler.ContentStore.GoogleCloudStorage
+dotnet add package DamianH.Http.HybridCacheHandler.ContentStore.GoogleCloudStorage
 ```
 
 ```csharp
-using DamianH.HttpHybridCacheHandler;
+using DamianH.Http.HybridCacheHandler;
 using Google.Cloud.Storage.V1;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -149,7 +149,7 @@ $env:HTTP_CACHE_GCS_TEST_BUCKET = "my-existing-private-test-bucket"
 $env:HTTP_CACHE_GCS_TEST_PREFIX = "http-cache-adapter-tests"
 # Optional if ADC is already configured:
 $env:GOOGLE_APPLICATION_CREDENTIALS = "C:\private\gcs-test-service-account.json"
-dotnet test --project hybrid-cache-handler\test\HttpHybridCacheHandler.ContentStore.GoogleCloudStorage.Tests\HttpHybridCacheHandler.ContentStore.GoogleCloudStorage.Tests.csproj
+dotnet test --project hybrid-cache-handler\test\HybridCacheHandler.ContentStore.GoogleCloudStorage.Tests\HybridCacheHandler.ContentStore.GoogleCloudStorage.Tests.csproj
 ```
 
 Once enabled, missing configuration, credentials, authorization, transport,

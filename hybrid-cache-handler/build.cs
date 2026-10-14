@@ -6,17 +6,17 @@ using static SimpleExec.Command;
 
 SharedTargets(
     "hybrid-cache-handler/hybrid-cache-handler.slnf",
-    "hybrid-cache-handler/src/HttpHybridCacheHandler",
+    "hybrid-cache-handler/src/HybridCacheHandler",
     registerPack: false);
 
 var packages = new (string Key, string Project)[]
 {
-    ("handler", "HttpHybridCacheHandler"),
-    ("contentstore", "HttpHybridCacheHandler.ContentStore"),
-    ("azureblob", "HttpHybridCacheHandler.ContentStore.AzureBlob"),
-    ("s3", "HttpHybridCacheHandler.ContentStore.S3"),
-    ("gcs", "HttpHybridCacheHandler.ContentStore.GoogleCloudStorage"),
-    ("filesystem", "HttpHybridCacheHandler.ContentStore.FileSystem"),
+    ("handler", "HybridCacheHandler"),
+    ("contentstore", "HybridCacheHandler.ContentStore"),
+    ("azureblob", "HybridCacheHandler.ContentStore.AzureBlob"),
+    ("s3", "HybridCacheHandler.ContentStore.S3"),
+    ("gcs", "HybridCacheHandler.ContentStore.GoogleCloudStorage"),
+    ("filesystem", "HybridCacheHandler.ContentStore.FileSystem"),
 };
 
 foreach (var (key, project) in packages)
@@ -35,7 +35,7 @@ AggregateTarget("pack-all", packages.Select(package => $"pack-{package.Key}"));
 AggregateTarget(Test, packages.Where(package => package.Key != "contentstore")
     .Select(package => $"test-{package.Key}"));
 
-const string compatibilityProject = "hybrid-cache-handler/test/HttpHybridCacheHandler.Compatibility.Tests";
+const string compatibilityProject = "hybrid-cache-handler/test/HybridCacheHandler.Compatibility.Tests";
 var repositoryRoot = Directory.GetCurrentDirectory();
 while (!Directory.Exists(Path.Combine(repositoryRoot, ".git")) && !File.Exists(Path.Combine(repositoryRoot, ".git")))
 {

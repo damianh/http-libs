@@ -8,22 +8,22 @@ section: HTTP cache content stores
 
 # Azure Blob HTTP cache content store
 
-`DamianH.HttpHybridCacheHandler.ContentStore.AzureBlob` targets `net10.0`,
+`DamianH.Http.HybridCacheHandler.ContentStore.AzureBlob` targets `net10.0`,
 `netstandard2.0`, and `net472` (.NET Framework 4.7.2+) and uses the
 official `Azure.Storage.Blobs` SDK (12.29.2). It depends on the independent
 ContentStore package, not the HTTP handler or HybridCache. Release tags use
 `cache-azureblob-v`. NativeAOT/trimming compatibility has **not** been validated.
 
-[NuGet](https://www.nuget.org/packages/DamianH.HttpHybridCacheHandler.ContentStore.AzureBlob/) |
-[Source](https://github.com/damianh/http-libs/tree/main/hybrid-cache-handler/src/HttpHybridCacheHandler.ContentStore.AzureBlob)
+[NuGet](https://www.nuget.org/packages/DamianH.Http.HybridCacheHandler.ContentStore.AzureBlob/) |
+[Source](https://github.com/damianh/http-libs/tree/main/hybrid-cache-handler/src/HybridCacheHandler.ContentStore.AzureBlob)
 
 ## Registration
 
-Install this package alongside `DamianH.HttpHybridCacheHandler`. Run in the
+Install this package alongside `DamianH.Http.HybridCacheHandler`. Run in the
 application project directory:
 
 ```powershell
-dotnet add package DamianH.HttpHybridCacheHandler.ContentStore.AzureBlob
+dotnet add package DamianH.Http.HybridCacheHandler.ContentStore.AzureBlob
 ```
 
 The application supplies an existing container client, including credentials,
@@ -32,8 +32,8 @@ retry policy and endpoint configuration. This sample also requires `Azure.Identi
 ```csharp
 using Azure.Identity;
 using Azure.Storage.Blobs;
-using DamianH.HttpHybridCacheHandler;
-using DamianH.HttpHybridCacheHandler.ContentStore.AzureBlob;
+using DamianH.Http.HybridCacheHandler;
+using DamianH.Http.HybridCacheHandler.ContentStore.AzureBlob;
 using Microsoft.Extensions.DependencyInjection;
 
 var services = new ServiceCollection();
@@ -172,7 +172,7 @@ The test does not provision resources, discover credentials, or modify account p
 From the repository root, after configuring those environment variables:
 
 ```powershell
-dotnet test --project hybrid-cache-handler\test\HttpHybridCacheHandler.ContentStore.AzureBlob.Tests\HttpHybridCacheHandler.ContentStore.AzureBlob.Tests.csproj
+dotnet test --project hybrid-cache-handler\test\HybridCacheHandler.ContentStore.AzureBlob.Tests\HybridCacheHandler.ContentStore.AzureBlob.Tests.csproj
 ```
 
 Each run uses a unique `http-cache-integration/<guid>` namespace and checks exact

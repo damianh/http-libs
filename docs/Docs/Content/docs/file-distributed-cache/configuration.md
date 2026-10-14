@@ -60,12 +60,12 @@ FileDistributedCache is a drop-in L2 backend for .NET's `HybridCache`. Registeri
 the file cache provides the `IDistributedCache` / `IBufferDistributedCache`
 services that `HybridCache` discovers for L2 storage.
 
-Install [DamianH.HttpHybridCacheHandler](/docs/hybrid-cache-handler/overview/) as
+Install [DamianH.Http.HybridCacheHandler](/docs/hybrid-cache-handler/overview/) as
 well as FileDistributedCache in your application project:
 
 ```sh
 dotnet add package DamianH.FileDistributedCache
-dotnet add package DamianH.HttpHybridCacheHandler
+dotnet add package DamianH.Http.HybridCacheHandler
 ```
 
 The following example assumes a Generic Host application with
@@ -73,7 +73,7 @@ Microsoft.Extensions.Hosting and Microsoft.Extensions.Http available:
 
 ```csharp
 using System.Net;
-using DamianH.HttpHybridCacheHandler;
+using DamianH.Http.HybridCacheHandler;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 

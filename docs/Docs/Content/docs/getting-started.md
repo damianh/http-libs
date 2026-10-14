@@ -19,7 +19,7 @@ choosing older targets, including the upstream HybridCache `net472` support warn
 
 | Your application needs | Choose | Important distinction |
 | --- | --- | --- |
-| Cache outbound HTTP responses through `HttpClient`. | [DamianH.HttpHybridCacheHandler](/docs/hybrid-cache-handler/overview/) | An RFC 9111 caching `DelegatingHandler`, using `HybridCache` for L1 memory and optional L2 storage. |
+| Cache outbound HTTP responses through `HttpClient`. | [DamianH.Http.HybridCacheHandler](/docs/hybrid-cache-handler/overview/) | An RFC 9111 caching `DelegatingHandler`, using `HybridCache` for L1 memory and optional L2 storage. |
 | Persist cache entries locally across process restarts without external infrastructure. | [DamianH.FileDistributedCache](/docs/file-distributed-cache/overview/) | An `IDistributedCache` / `IBufferDistributedCache` backend, not an HTTP handler or a cache shared across instances. |
 | Parse, serialize, or map HTTP Structured Field Values to POCOs. | [DamianH.Http.StructuredFieldValues](/docs/structured-field-values/overview/) | For RFC 8941/9651 structured fields, not arbitrary HTTP header syntax. |
 | Sign HTTP messages or verify message signatures. | [DamianH.Http.HttpSignatures](/docs/signatures/overview/) | RFC 9421 cryptographic verification is not a substitute for application acceptance policy or replay protection. |
@@ -30,7 +30,7 @@ choosing older targets, including the upstream HybridCache `net472` support warn
 Run the relevant command from the directory containing your application project:
 
 ```sh
-dotnet add package DamianH.HttpHybridCacheHandler
+dotnet add package DamianH.Http.HybridCacheHandler
 ```
 
 ```sh

@@ -2,7 +2,7 @@
 
 using System.Diagnostics;
 using System.Net;
-using DamianH.HttpHybridCacheHandler;
+using DamianH.Http.HybridCacheHandler;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Caching.Hybrid;

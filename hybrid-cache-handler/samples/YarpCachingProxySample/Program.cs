@@ -1,6 +1,6 @@
 // Copyright Damian Hickey
 
-using DamianH.HttpHybridCacheHandler;
+using DamianH.Http.HybridCacheHandler;
 using Microsoft.Extensions.Options;
 using Yarp.ReverseProxy.Forwarder;
 

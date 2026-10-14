@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>DamianH.Http.HybridCacheHandler.ContentStore.AzureBlob</AssemblyName>
+    <RootNamespace>DamianH.Http.HybridCacheHandler.ContentStore.AzureBlob</RootNamespace>
+    <MinVerMinimumMajorMinor>0.1</MinVerMinimumMajorMinor>
+    <MinVerTagPrefix>cache-azureblob-v</MinVerTagPrefix>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PackageId>DamianH.Http.HybridCacheHandler.ContentStore.AzureBlob</PackageId>
+    <Authors>Damian Hickey</Authors>
+    <Description>Streaming Azure Blob Storage content store for HTTP caching.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/damianh/http-libs</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.29.2" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.10" />
+    <PackageReference Include="MinVer" Version="7.0.0" PrivateAssets="all" />
+    <ProjectReference Include="..\HybridCacheHandler.ContentStore\HybridCacheHandler.ContentStore.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' != 'net10.0'">
+    <PackageReference Include="System.Memory" Version="4.6.3" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.10" />
+  </ItemGroup>
+</Project>
