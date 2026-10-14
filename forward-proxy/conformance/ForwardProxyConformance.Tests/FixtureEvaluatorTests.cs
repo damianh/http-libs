@@ -78,4 +78,46 @@ public class FixtureEvaluatorTests
         observation.ProxyResponses.ShouldHaveSingleItem().Status.ShouldBe(200);
         observation.Forwarded.ShouldBeEmpty();
     }
+
+    [Theory]
+    [InlineData("GET\t/b HTTP/1.1\r\n")]
+    [InlineData("GET /b HTTP/1.1\n")]
+    [InlineData("GET /b HTTP/1.2\r\n")]
+    public void Every_pipelined_request_line_must_be_strict(string secondLine)
+    {
+        var result = Evaluate(Fixture(Expectations.Forward, new FixtureCheck { Count = 2 }),
+            Echo("GET /a HTTP/1.1\r\n\r\n" + secondLine + "\r\n"));
+        result.Outcome.ShouldBe(Outcomes.Fail);
+        result.Reasons.ShouldContain(r => r.StartsWith("origin received a malformed request line", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("Via: 1.0 upstream-client, 1.1 proxy\r\n", Outcomes.Pass)]
+    [InlineData("Via: 1.0 upstream-client\r\nVia: 1.1 proxy\r\n", Outcomes.Pass)]
+    [InlineData("Via: 1.1 proxy\r\n", Outcomes.Fail)]
+    [InlineData("Via: 1.0 upstream-client\r\n", Outcomes.Fail)]
+    public void Via_fixture_accepts_combined_or_separate_field_lines(string fields, string outcome)
+    {
+        var fixture = FixtureCorpus.Load(Path.Combine(ConformancePaths.Directory, "fixtures.json")).Fixtures.Single(f => f.Id == "via-appended");
+        Evaluate(fixture, Echo($"GET / HTTP/1.1\r\n{fields}\r\n")).Outcome.ShouldBe(outcome);
+    }
+
+    [Theory]
+    [InlineData("HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n", Outcomes.Pass)]
+    [InlineData("", Outcomes.Fail)]
+    [InlineData("HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nhi", Outcomes.Fail)]
+    [InlineData("HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n", Outcomes.Fail)]
+    public void Max_forwards_zero_requires_a_complete_successful_proxy_response(string raw, string outcome)
+    {
+        var fixture = FixtureCorpus.Load(Path.Combine(ConformancePaths.Directory, "fixtures.json")).Fixtures.Single(f => f.Id == "max-forwards-zero-options");
+        Evaluate(fixture, raw).Outcome.ShouldBe(outcome);
+        Evaluate(fixture, Echo("OPTIONS * HTTP/1.1\r\n\r\n")).Outcome.ShouldBe(Outcomes.Fail);
+    }
+
+    [Fact]
+    public void Empty_exchange_is_reported_as_no_response_without_claiming_connection_closure()
+    {
+        var (observation, _) = FixtureEvaluator.Observe("", EchoOrigin.Server);
+        observation.NoResponse.ShouldBeTrue();
+    }
 }

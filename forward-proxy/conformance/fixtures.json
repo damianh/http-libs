@@ -204,7 +204,10 @@
       "description": "A proxy appends to, rather than replaces, a received Via.",
       "payload": "GET http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\nVia: 1.0 upstream-client\r\n\r\n",
       "expect": "forward",
-      "checks": [{ "header": "via", "matches": "1\\.0 upstream-client.*,\\s*(HTTP/)?1\\.1 \\S+" }]
+      "checks": [
+        { "header": "via", "matches": "(^|,\\s*)1\\.0 upstream-client(\\s*,|$)" },
+        { "header": "via", "matches": "(^|,\\s*)(HTTP/)?1\\.1 \\S+" }
+      ]
     },
     {
       "id": "max-forwards-zero-options",
@@ -212,7 +215,8 @@
       "reference": "RFC 9110 §7.6.2",
       "description": "OPTIONS with Max-Forwards: 0 must not be forwarded; the proxy responds as the final recipient.",
       "payload": "OPTIONS http://{origin}/ HTTP/1.1\r\nHost: {origin}\r\nMax-Forwards: 0\r\n\r\n",
-      "expect": "not-forwarded"
+      "expect": "not-forwarded",
+      "status": [200]
     },
     {
       "id": "max-forwards-decremented",

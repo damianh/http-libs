@@ -36,7 +36,7 @@ internal sealed record Observation(
     IReadOnlyList<string> OriginReceived,
     string UnparsedForwarded,
     string UnparsedResponse,
-    bool ClosedWithoutResponse);
+    bool NoResponse);
 
 internal static partial class FixtureEvaluator
 {
@@ -55,7 +55,7 @@ internal static partial class FixtureEvaluator
         {
             Expectations.Forward => CheckForward(fixture, observation, requests, origin),
             Expectations.Reject => CheckReject(fixture, observation),
-            Expectations.NotForwarded => CheckNotForwarded(observation),
+            Expectations.NotForwarded => CheckNotForwarded(fixture, observation),
             Expectations.RejectOrForward => CheckRejectOrForward(fixture, observation, requests, origin),
             _ => throw new InvalidDataException($"Unknown expectation {ConformanceJson.Quote(fixture.Expect)} in {fixture.Id}."),
         };
@@ -108,9 +108,9 @@ internal static partial class FixtureEvaluator
             reasons.Add($"origin received unparseable bytes {ConformanceJson.Quote(observed.UnparsedForwarded)}");
         }
         // The request parser is permissive (e.g. "GET  HTTP/1.1" parses), so check raw request lines too.
-        foreach (var received in observed.OriginReceived.Where(received => !StrictRequestLine().IsMatch(received)))
+        foreach (var request in requests.Where(request => !StrictRequestLine().IsMatch(request.RawStartLine)))
         {
-            reasons.Add($"origin received a malformed request line {ConformanceJson.Quote(received.Split('\n', 2)[0])}");
+            reasons.Add($"origin received a malformed request line {ConformanceJson.Quote(request.RawStartLine.Split('\n', 2)[0])}");
         }
         for (var index = 0; index < requests.Count; index++)
         {
@@ -187,6 +187,16 @@ internal static partial class FixtureEvaluator
         observed.Forwarded.Count > 0 || observed.UnparsedForwarded.Length > 0
             ? [$"{observed.Forwarded.Count} request(s) reached the origin"]
             : [];
+
+    private static List<string> CheckNotForwarded(Fixture fixture, Observation observed)
+    {
+        var reasons = CheckNotForwarded(observed);
+        if (fixture.Status is { } allowed && !observed.ProxyResponses.Any(r => allowed.Contains(r.Status)))
+        {
+            reasons.Add($"no proxy response with status in {ConformanceJson.Quote(allowed)}");
+        }
+        return reasons;
+    }
 
     private static List<string> CheckReject(Fixture fixture, Observation observed)
     {

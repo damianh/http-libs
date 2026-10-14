@@ -4,6 +4,7 @@
 using System.Buffers;
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace DamianH.Http.ForwardProxy.Conformance;
 
@@ -15,6 +16,8 @@ internal sealed record ParsedRequest(
     IReadOnlyList<KeyValuePair<string, string>> Fields,
     string Body)
 {
+    public required string RawStartLine { get; init; }
+
     /// <summary>
     /// The method and field names are tokens and field values contain no CR, LF or NUL (RFC 9110 §5.1, §5.5, §9.1).
     /// A message violating these may be interpreted differently by a downstream parser.
@@ -37,8 +40,11 @@ internal sealed record ParsedResponse(int Status, IReadOnlyList<KeyValuePair<str
 /// Permissive HTTP/1 parsing of what the origin and client observe. Parsing is deliberately lenient so that
 /// malformed forwarded bytes are still visible to fixture checks; strictness is applied by the evaluator.
 /// </summary>
-internal static class Http1
+internal static partial class Http1
 {
+    [GeneratedRegex("""\A[0-9A-Fa-f]+(?:[ \t]*;[ \t]*[!#$%&'*+.^_`|~0-9A-Za-z-]+(?:[ \t]*=[ \t]*(?:[!#$%&'*+.^_`|~0-9A-Za-z-]+|"(?:[\x09\x20\x21\x23-\x5b\x5d-\xff]|\\[\x09\x20-\x7e\x80-\xff])*"))?)*\z""")]
+    private static partial Regex ChunkSizeLine();
+
     public static readonly Encoding Latin1 = Encoding.Latin1;
 
     private static readonly SearchValues<char> TokenChars =
@@ -74,6 +80,7 @@ internal static class Http1
         // Any run of SP/HTAB separates parts, so an empty request-target ("GET  HTTP/1.1") parses with
         // "HTTP/1.1" as the target and no version, and is then caught by field checks.
         var parts = line.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
+        var rawStartLine = raw[..position];
         string version;
         if (parts.Length == 2)
         {
@@ -94,7 +101,7 @@ internal static class Http1
             return false;
         }
 
-        request = new ParsedRequest(parts[0], parts[1], version, fields, body);
+        request = new ParsedRequest(parts[0], parts[1], version, fields, body) { RawStartLine = rawStartLine };
         rest = raw[position..];
         return true;
     }
@@ -209,9 +216,12 @@ internal static class Http1
         }
         if (contentLength is { } declared)
         {
-            var available = Math.Min(declared, raw.Length - position);
-            body = raw.Substring(position, (int)available);
-            position += (int)available;
+            if (declared > raw.Length - position)
+            {
+                return false;
+            }
+            body = raw.Substring(position, (int)declared);
+            position += (int)declared;
             return true;
         }
         if (isResponse)
@@ -233,7 +243,8 @@ internal static class Http1
                 return false;
             }
             var digits = line.AsSpan()[..Math.Max(0, line.AsSpan().IndexOfAnyExcept(HexDigits) is var i and >= 0 ? i : line.Length)];
-            if (digits.IsEmpty
+            if (!ChunkSizeLine().IsMatch(line)
+                || digits.IsEmpty
                 || !long.TryParse(digits, NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture, out var size)
                 || size < 0
                 || size > raw.Length - next)

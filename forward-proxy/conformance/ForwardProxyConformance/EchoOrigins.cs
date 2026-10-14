@@ -79,9 +79,9 @@ internal sealed class EchoOrigin : IEchoOrigin
                     $"HTTP/1.1 200 OK\r\nServer: {Server}\r\nContent-Length: {received.Length}\r\n\r\n");
                 try
                 {
-                    socket.Send([.. head, .. received]);
+                    SocketWrites.SendAll(socket, [.. head, .. received]);
                 }
-                catch (SocketException)
+                catch (Exception ex) when (ex is SocketException or IOException)
                 {
                     return;
                 }

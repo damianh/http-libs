@@ -79,7 +79,7 @@ Each fixture in `fixtures.json` has an `id`, `reference`, raw `payload` (with
 | --- | --- |
 | `forward` | The origin receives the expected number of requests (default 1), every check holds, no proxy error is returned, and the forwarded bytes have a strict request line, parse without leftovers and have valid method and field syntax. |
 | `reject` | Nothing reaches the origin and the proxy responds with a listed status (default any 4xx). |
-| `not-forwarded` | Nothing reaches the origin. |
+| `not-forwarded` | Nothing reaches the origin; when `status` is listed, a complete proxy response with an allowed status is required. |
 | `reject-or-forward` | Either `reject` or `forward` passes, for requirements that allow rejecting or repairing a message. |
 
 Checks address request `request` (default 0) by `method`, `uri`, `version`,
@@ -90,7 +90,8 @@ parsed requests and raw origin bytes.
 `expected-results.json` stores `pass`/`fail`/`error` per fixture. The gate fails
 on a missing baseline fixture or a `pass` that no longer passes. New passes,
 changed failure types and fixtures not yet in the baseline are reported without
-gating. Only full runs may use `--update`; review the diff before committing it.
+gating. Socket/I/O run errors always gate, including known failures and new fixtures.
+Only full runs without run errors may use `--update`; review the diff before committing it.
 
 ## Known failures in the baseline
 

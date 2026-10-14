@@ -40,7 +40,7 @@ internal sealed class Fixture
     public required string Expect { get; init; }
     public IReadOnlyList<FixtureCheck> Checks { get; init; } = [];
 
-    /// <summary>Allowed proxy statuses for a rejection; any 4xx when omitted.</summary>
+    /// <summary>Allowed proxy statuses for a rejection (4xx when omitted), or a required response for not-forwarded.</summary>
     public IReadOnlyList<int>? Status { get; init; }
 }
 

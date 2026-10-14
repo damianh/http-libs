@@ -29,6 +29,10 @@ public class Http1Tests
     [InlineData("GET / HTTP/1.1\r\nno colon\r\n\r\n")]
     [InlineData("GET / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nab\r\n")]
     [InlineData("GET / HTTP/1.1\r\nContent-Length: +5\r\n\r\nhello")]
+    [InlineData("POST / HTTP/1.1\r\nContent-Length: 5\r\n\r\nhi")]
+    [InlineData("POST / HTTP/1.1\r\nContent-Length: 9223372036854775807\r\n\r\nhi")]
+    [InlineData("POST / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n5junk\r\nhello\r\n0\r\n\r\n")]
+    [InlineData("POST / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n5;ext=\"unterminated\r\nhello\r\n0\r\n\r\n")]
     public void Incomplete_or_unframeable_requests_are_left_unparsed(string raw)
     {
         var (requests, leftover) = Http1.ParseRequests(raw);
@@ -55,6 +59,21 @@ public class Http1Tests
         Http1.TryParseResponse("HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\noops", out var response, out var rest).ShouldBeTrue();
         response.Status.ShouldBe(400);
         response.Body.ShouldBe("oops");
+        rest.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void Truncated_response_is_not_parsed() =>
+        Http1.TryParseResponse("HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nhi", out _, out _).ShouldBeFalse();
+
+    [Theory]
+    [InlineData("5;ext=token")]
+    [InlineData("5 ; ext = \"a\\\"b\";flag")]
+    public void Parses_legal_chunk_extensions(string sizeLine)
+    {
+        Http1.TryParseRequest($"POST / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n{sizeLine}\r\nhello\r\n0\r\n\r\n",
+            out var request, out var rest).ShouldBeTrue();
+        request.Body.ShouldBe("hello");
         rest.ShouldBeEmpty();
     }
 }

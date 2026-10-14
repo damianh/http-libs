@@ -54,6 +54,34 @@ public class ResultComparerTests
         Compare(new() { ["a"] = new(Outcomes.Error, Expectations.Forward, "RFC", ["SocketException"]) }, new() { ["a"] = "pass" })
             .Code.ShouldBe(1);
 
+    [Theory]
+    [InlineData("fail")]
+    [InlineData("error")]
+    public void Driver_errors_gate_even_when_baseline_is_not_pass(string expected) =>
+        Compare(new() { ["a"] = new(Outcomes.Error, Expectations.Forward, "RFC", ["SocketException"]) }, new() { ["a"] = expected })
+            .Code.ShouldBe(1);
+
+    [Fact]
+    public void Driver_errors_in_new_fixtures_also_gate() =>
+        Compare(new() { ["a"] = new(Outcomes.Error, Expectations.Forward, "RFC", ["SocketException"]) }, []).Code.ShouldBe(1);
+
+    [Fact]
+    public void WriteBaseline_refuses_errors_without_modifying_the_file()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, "reviewed baseline");
+            Should.Throw<InvalidDataException>(() => ResultComparer.WriteBaseline(
+                new Dictionary<string, FixtureResult> { ["a"] = Pass, ["b"] = new(Outcomes.Error, Expectations.Forward, "RFC", ["SocketException"]) }, path));
+            File.ReadAllText(path).ShouldBe("reviewed baseline");
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
     [Fact]
     public void New_passes_are_allowed_without_changing_the_baseline()
     {

@@ -17,6 +17,11 @@ internal static class ResultComparer
 
     public static void WriteBaseline(IReadOnlyDictionary<string, FixtureResult> results, string path)
     {
+        var errors = results.Where(entry => entry.Value.Outcome == Outcomes.Error).Select(entry => entry.Key).ToList();
+        if (errors.Count > 0)
+        {
+            throw new InvalidDataException($"Baseline not written: run errors in {string.Join(", ", errors)}.");
+        }
         var outcomes = new SortedDictionary<string, string>(StringComparer.Ordinal);
         foreach (var (id, result) in results)
         {
@@ -42,6 +47,10 @@ internal static class ResultComparer
             {
                 missing.Add(id);
             }
+            else if (result.Outcome == Outcomes.Error)
+            {
+                regressions.Add($"{id}: {expected} -> error: {string.Join("; ", result.Reasons)}");
+            }
             else if (result.Outcome == expected)
             {
                 if (expected != Outcomes.Pass)
@@ -64,6 +73,8 @@ internal static class ResultComparer
         }
         var unknown = results.Keys.Where(id => !baseline.ContainsKey(id)).Order(StringComparer.Ordinal)
             .Select(id => $"{id}: {results[id].Outcome}").ToList();
+        regressions.AddRange(results.Where(entry => !baseline.ContainsKey(entry.Key) && entry.Value.Outcome == Outcomes.Error)
+            .Select(entry => $"{entry.Key}: error: {string.Join("; ", entry.Value.Reasons)}"));
 
         Section($"Known baseline failures ({known.Count}), not gating:", known);
         Section($"🎉 New passes ({newPasses.Count}) — consider updating the baseline:", newPasses);

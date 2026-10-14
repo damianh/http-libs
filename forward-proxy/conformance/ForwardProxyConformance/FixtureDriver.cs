@@ -45,7 +45,7 @@ internal sealed class FixtureDriver(IPEndPoint proxy, string origin, string echo
         {
             try
             {
-                socket.Send(Http1.Latin1.GetBytes(FixtureEvaluator.Substitute(fixture.Payload[index], origin)));
+                SocketWrites.SendAll(socket, Http1.Latin1.GetBytes(FixtureEvaluator.Substitute(fixture.Payload[index], origin)));
             }
             catch (SocketException)
             {
@@ -76,6 +76,22 @@ internal sealed class FixtureDriver(IPEndPoint proxy, string origin, string echo
             SocketReads.ReadUntilIdle(socket, received, buffer);
         }
         return Http1.Latin1.GetString(received.ToArray());
+    }
+}
+
+internal static class SocketWrites
+{
+    public static void SendAll(Socket socket, ReadOnlySpan<byte> bytes)
+    {
+        while (!bytes.IsEmpty)
+        {
+            var sent = socket.Send(bytes);
+            if (sent == 0)
+            {
+                throw new IOException("Socket closed before all bytes were sent.");
+            }
+            bytes = bytes[sent..];
+        }
     }
 }
 
