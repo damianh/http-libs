@@ -29,6 +29,7 @@ jobs:
       tag-prefix: ${{ steps.select.outputs.tag-prefix }}
       pack-target: ${{ steps.select.outputs.pack-target }}
       artifact-directory: ${{ steps.select.outputs.artifact-directory }}
+      changelog-paths: ${{ steps.select.outputs.changelog-paths }}
     steps:
       - name: Select independent package
         id: select
@@ -48,6 +49,8 @@ jobs:
           echo "tag-prefix=$tag" >> "$GITHUB_OUTPUT"
           echo "pack-target=pack-$PACKAGE" >> "$GITHUB_OUTPUT"
           echo "artifact-directory=artifacts/$PACKAGE" >> "$GITHUB_OUTPUT"
+          src="hybrid-cache-handler/src"
+          echo "changelog-paths=$src/HybridCacheHandler$suffix $src/Compatibility $src/Directory.Build.props $src/Directory.Build.targets" >> "$GITHUB_OUTPUT"
 
   release:
     needs: select-package
@@ -60,6 +63,7 @@ jobs:
       tag-prefix: ${{ needs.select-package.outputs.tag-prefix }}
       pack-target: ${{ needs.select-package.outputs.pack-target }}
       artifact-directory: ${{ needs.select-package.outputs.artifact-directory }}
+      changelog-paths: ${{ needs.select-package.outputs.changelog-paths }}
       version: ${{ inputs.version }}
     secrets:
       NUGET_ORG_APIKEY: ${{ secrets.NUGET_ORG_APIKEY }}
