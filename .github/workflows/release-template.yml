@@ -29,6 +29,11 @@ on:
         required: false
         type: string
         default: artifacts
+      changelog-paths:
+        description: "Space-separated git pathspecs whose PRs appear in the release notes (defaults to the product folder)"
+        required: false
+        type: string
+        default: ""
     secrets:
       NUGET_ORG_APIKEY:
         required: true
@@ -101,6 +106,62 @@ jobs:
           path: ${{ inputs.product }}/${{ inputs.artifact-directory }}/${{ inputs.package }}.${{ inputs.version }}.nupkg
           if-no-files-found: error
 
+      - name: Generate release notes
+        # GitHub's generated notes compare against the previous tag of any library in this
+        # monorepo. Scope them to this package's tag prefix and paths instead.
+        env:
+          TAG: ${{ inputs.tag-prefix }}${{ inputs.version }}
+          TAG_PREFIX: ${{ inputs.tag-prefix }}
+          PACKAGE: ${{ inputs.package }}
+          VERSION: ${{ inputs.version }}
+          PATHS: ${{ inputs.changelog-paths || inputs.product }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          set -euo pipefail
+          set -f
+          read -ra pathspecs <<< "$PATHS"
+          set +f
+
+          # The next lower version after the current tag (which was created earlier in this job).
+          prev=$(git -c versionsort.suffix=- tag -l "${TAG_PREFIX}*" --sort=-v:refname \
+            | grep -E "^${TAG_PREFIX}[0-9]" | awk -v tag="$TAG" 'found { print; exit } $0 == tag { found = 1 }' || true)
+          range="$TAG"
+          if [ -n "$prev" ]; then range="$prev..$TAG"; fi
+
+          # Union of first-parent and full walks: the first catches merge commits,
+          # the second catches PRs stacked onto other PR branches.
+          prs=$({ git log --first-parent --format='%s' "$range" -- "${pathspecs[@]}"
+                  git log --format='%s' "$range" -- "${pathspecs[@]}"; } \
+            | grep -oE '\(#[0-9]+\)$|^Merge pull request #[0-9]+' | grep -oE '[0-9]+' | sort -un || true)
+
+          {
+            echo "**NuGet:** [$PACKAGE $VERSION](https://www.nuget.org/packages/$PACKAGE/$VERSION)"
+            echo
+            if [ -n "$prev" ]; then echo "## Changes since $prev"; else echo "## Initial release"; fi
+            echo
+            commits=$(git log --no-merges -n 50 --format='* %s (%h)' "$range" -- "${pathspecs[@]}")
+            if [ -n "$prs" ]; then
+              subjects=$(git log --format='%H %s' "$range")
+              for n in $prs; do
+                title=$(grep -m1 -E " .*\(#$n\)$" <<< "$subjects" | cut -d' ' -f2- | sed -E 's/ \(#[0-9]+\)$//' || true)
+                if [ -z "$title" ]; then
+                  sha=$(grep -m1 -E "^[0-9a-f]+ Merge pull request #$n " <<< "$subjects" | cut -d' ' -f1 || true)
+                  if [ -n "$sha" ]; then title=$(git log -1 --format='%b' "$sha" | sed -n '/./{p;q;}'); fi
+                fi
+                echo "* ${title:-Pull request} (#$n)"
+              done
+            elif [ -n "$commits" ]; then
+              echo "$commits"
+            else
+              echo "No changes to this package's source since $prev."
+            fi
+            if [ -n "$prev" ]; then
+              echo
+              echo "**Full Changelog**: $REPO_URL/compare/$prev...$TAG"
+            fi
+          } > "$RUNNER_TEMP/release-notes.md"
+          cat "$RUNNER_TEMP/release-notes.md"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -108,4 +169,4 @@ jobs:
           name: ${{ inputs.package }} ${{ inputs.version }}
           draft: false
           prerelease: ${{ contains(inputs.version, '-') }}
-          generate_release_notes: true
+          body_path: ${{ runner.temp }}/release-notes.md
