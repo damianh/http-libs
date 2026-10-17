@@ -27,4 +27,18 @@ public sealed class ForwardProxyTlsInterceptionOptions
     /// A failure is reported to the client as <c>502</c> with <c>tls_certificate_error</c>.
     /// </summary>
     public RemoteCertificateValidationCallback? DestinationCertificateValidation { get; set; }
+
+    /// <summary>
+    /// Maximum cached upstream client-certificate identities. Defaults to 128 and must be positive.
+    /// The no-certificate pool is separate. Idle entries may be evicted to make room; when all entries are active,
+    /// a request needing another identity fails with <c>503 connection_limit_reached</c>.
+    /// </summary>
+    public int MaxUpstreamClientCertificatePools { get; set; } = 128;
+
+    /// <summary>
+    /// Time without active forwarding operations before an upstream client-certificate pool is disposed.
+    /// Defaults to 2 minutes. Must be positive and at most <see cref="int.MaxValue"/> milliseconds.
+    /// Streaming responses and upgraded connections keep their pool active until forwarding completes.
+    /// </summary>
+    public TimeSpan UpstreamClientCertificatePoolIdleTimeout { get; set; } = TimeSpan.FromMinutes(2);
 }

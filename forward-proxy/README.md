@@ -18,6 +18,8 @@ and destination rules.
 - Optional TLS interception of selected `CONNECT` tunnels (HTTP/1.1 and
   HTTP/2) with your own certificate provider, so middleware or request
   transforms can modify requests, for example to inject credentials.
+- Optional per-request upstream client-certificate selection for intercepted
+  HTTPS requests, with certificate-isolated connection pooling for mTLS.
 - RFC 9209 `Proxy-Status` errors, `Via`, logs, metrics and traces.
 
 ## Installation

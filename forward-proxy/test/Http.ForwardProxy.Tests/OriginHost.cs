@@ -7,6 +7,7 @@ using System.Text;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -28,7 +29,7 @@ internal sealed class OriginHost : IAsyncDisposable
 
     public Uri Uri { get; }
 
-    public static async Task<OriginHost> StartAsync(bool tls = false, RequestDelegate? handler = null)
+    public static async Task<OriginHost> StartAsync(bool tls = false, RequestDelegate? handler = null, Action<HttpsConnectionAdapterOptions>? configureTls = null)
     {
         var builder = WebApplication.CreateSlimBuilder();
         builder.Logging.SetMinimumLevel(LogLevel.Warning);
@@ -36,7 +37,11 @@ internal sealed class OriginHost : IAsyncDisposable
         {
             if (tls)
             {
-                listen.UseHttps(TestCertificate.Instance);
+                listen.UseHttps(options =>
+                {
+                    options.ServerCertificate = TestCertificate.Instance;
+                    configureTls?.Invoke(options);
+                });
             }
         }));
         var app = builder.Build();

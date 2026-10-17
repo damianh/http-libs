@@ -35,9 +35,9 @@ Connection: close
 | 502 | `http_response_incomplete` | Destination response was invalid (`http://` and intercepted requests) |
 | 502 | `tls_certificate_error` | Destination's certificate failed validation (intercepted requests) |
 | 502 | `tls_protocol_error` | TLS with the destination failed (intercepted requests) |
-| 500 | `proxy_internal_error` | Unexpected proxy failure (logged) |
-| 503 | `connection_limit_reached` | `MaxConcurrentTunnels` reached (`CONNECT` or WebSocket upgrade) |
-| 504 | `connection_timeout` | `ConnectTimeout` elapsed (including DNS), or `HttpActivityTimeout` for `http://` and intercepted requests |
+| 500 | `proxy_internal_error` | Unexpected proxy failure, including an upstream client-certificate selector exception or invalid selection (logged) |
+| 503 | `connection_limit_reached` | `MaxConcurrentTunnels` reached (`CONNECT` or WebSocket upgrade), or all upstream client-certificate pools are active at their configured limit |
+| 504 | `connection_timeout` | `ConnectTimeout` elapsed (including DNS and upstream client-certificate selection), or `HttpActivityTimeout` for `http://` and intercepted requests |
 
 `407` and authorization `403` responses come from the authentication handler
 and do not carry `Proxy-Status`. Set `AddProxyStatusHeader = false` to omit the

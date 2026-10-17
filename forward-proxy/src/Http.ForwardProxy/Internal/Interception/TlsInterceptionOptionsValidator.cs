@@ -21,6 +21,16 @@ internal sealed class TlsInterceptionOptionsValidator : IValidateOptions<Forward
             failures.Add($"{nameof(ForwardProxyTlsInterceptionOptions.HandshakeTimeout)} must be positive and at most {int.MaxValue} milliseconds (about 24.8 days).");
         }
 
+        if (options.MaxUpstreamClientCertificatePools <= 0)
+        {
+            failures.Add($"{nameof(ForwardProxyTlsInterceptionOptions.MaxUpstreamClientCertificatePools)} must be positive.");
+        }
+
+        if (options.UpstreamClientCertificatePoolIdleTimeout <= TimeSpan.Zero || options.UpstreamClientCertificatePoolIdleTimeout.TotalMilliseconds > int.MaxValue)
+        {
+            failures.Add($"{nameof(ForwardProxyTlsInterceptionOptions.UpstreamClientCertificatePoolIdleTimeout)} must be positive and at most {int.MaxValue} milliseconds.");
+        }
+
         return failures.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(failures);
     }
 }

@@ -588,7 +588,7 @@ public class TlsInterceptionTests
     public void DefaultOptionsAreValid() =>
         new TlsInterceptionOptionsValidator().Validate(null, new ForwardProxyTlsInterceptionOptions()).Succeeded.ShouldBeTrue();
 
-    private static Task<ProxyHost> StartInterceptingProxyAsync(
+    internal static Task<ProxyHost> StartInterceptingProxyAsync(
         Func<HttpContext, ForwardProxyDestination, bool>? select = null,
         Func<ForwardProxyDestination, SslStreamCertificateContext?>? certificates = null,
         Action<ForwardProxyOptions>? configure = null,
@@ -615,7 +615,7 @@ public class TlsInterceptionTests
             tls,
             configureApp);
 
-    private static HttpClient CreateClient(
+    internal static HttpClient CreateClient(
         ProxyHost proxy,
         Action<X509Certificate?, SslPolicyErrors>? onCertificate = null,
         Version? version = null,
