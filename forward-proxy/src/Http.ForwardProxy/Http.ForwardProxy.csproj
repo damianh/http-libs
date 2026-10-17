@@ -3,7 +3,7 @@
     <AssemblyName>DamianH.Http.ForwardProxy</AssemblyName>
     <RootNamespace>DamianH.Http.ForwardProxy</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <MinVerMinimumMajorMinor>0.1</MinVerMinimumMajorMinor>
+    <MinVerMinimumMajorMinor>0.2</MinVerMinimumMajorMinor>
     <MinVerTagPrefix>fwdproxy-v</MinVerTagPrefix>
     <PackageId>DamianH.Http.ForwardProxy</PackageId>
     <Authors>Damian Hickey</Authors>

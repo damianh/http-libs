@@ -9,6 +9,7 @@ using System.Net.Http;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Claims;
+using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -51,8 +52,10 @@ internal sealed class ForwardProxyHandler : IDisposable
         _limiter = new TunnelLimiter(_options.MaxConcurrentTunnels);
         _logger = logger;
         _interceptor = services.GetService<TlsInterceptor>();
-        var destinationCertificateValidation = services.GetService<IOptions<ForwardProxyTlsInterceptionOptions>>()?.Value.DestinationCertificateValidation;
-        _forwarder = new HttpForwarder(CreateHttpClient(dialer, _options, destinationCertificateValidation), _options);
+        var interceptionOptions = services.GetService<IOptions<ForwardProxyTlsInterceptionOptions>>()?.Value ?? new();
+        _forwarder = new HttpForwarder(new UpstreamHttpClientPool(
+            certificate => CreateHttpClient(dialer, _options, interceptionOptions.DestinationCertificateValidation, certificate),
+            interceptionOptions), _options);
         if (_authorizer.IsAnonymous)
         {
             Log.AnonymousProxy(logger);
@@ -260,7 +263,7 @@ internal sealed class ForwardProxyHandler : IDisposable
         var tunnelStarted = false;
         try
         {
-            failure = await _forwarder.SendAsync(context, target, destination, isUpgrade ? StartTunnel : null).ConfigureAwait(false);
+            failure = await _forwarder.SendAsync(context, target, destination, isUpgrade ? StartTunnel : null, intercepted).ConfigureAwait(false);
         }
         finally
         {
@@ -380,7 +383,7 @@ internal sealed class ForwardProxyHandler : IDisposable
         return null;
     }
 
-    private static HttpMessageInvoker CreateHttpClient(ProxyDialer dialer, ForwardProxyOptions options, RemoteCertificateValidationCallback? destinationCertificateValidation) =>
+    private static HttpMessageInvoker CreateHttpClient(ProxyDialer dialer, ForwardProxyOptions options, RemoteCertificateValidationCallback? destinationCertificateValidation, X509Certificate2? clientCertificate) =>
         new(new SocketsHttpHandler
         {
             UseProxy = false,
@@ -397,6 +400,10 @@ internal sealed class ForwardProxyHandler : IDisposable
             },
             SslOptions = new SslClientAuthenticationOptions
             {
+                ClientCertificates = clientCertificate is null ? null : new X509CertificateCollection { clientCertificate },
+                LocalCertificateSelectionCallback = clientCertificate is null ? null : (_, _, _, _, _) => clientCertificate,
+                // Session caches must not resume an authentication established under a different client identity.
+                AllowTlsResume = clientCertificate is null,
                 // Only intercepted requests use https://. Throwing lets the failure be reported as tls_certificate_error.
                 RemoteCertificateValidationCallback = (sender, certificate, chain, errors) =>
                     (destinationCertificateValidation?.Invoke(sender, certificate, chain, errors) ?? errors == SslPolicyErrors.None)

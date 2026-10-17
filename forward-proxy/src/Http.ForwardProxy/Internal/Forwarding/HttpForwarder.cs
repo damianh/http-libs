@@ -9,6 +9,7 @@
 
 using System.Net;
 using System.Net.Http;
+using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Timeouts;
@@ -19,7 +20,7 @@ using Microsoft.Net.Http.Headers;
 namespace DamianH.Http.ForwardProxy.Internal.Forwarding;
 
 /// <summary>Forwards a request to its <c>http://</c> or (intercepted) <c>https://</c> destination.</summary>
-internal sealed class HttpForwarder(HttpMessageInvoker httpClient, ForwardProxyOptions options) : IDisposable
+internal sealed class HttpForwarder(UpstreamHttpClientPool clients, ForwardProxyOptions options) : IDisposable
 {
     private const string WebSocket = "websocket";
 
@@ -29,7 +30,7 @@ internal sealed class HttpForwarder(HttpMessageInvoker httpClient, ForwardProxyO
     private static readonly ProxyError ClientAborted = new(StatusCodes.Status400BadRequest, ProxyErrorTypes.HttpRequestError, "Client aborted the request.");
     private static readonly ProxyError TlsProtocolError = new(StatusCodes.Status502BadGateway, ProxyErrorTypes.TlsProtocolError, "TLS handshake with the destination failed.");
 
-    public void Dispose() => httpClient.Dispose();
+    public void Dispose() => clients.Dispose();
 
     /// <summary>Forwards the request.</summary>
     /// <param name="context">The client request.</param>
@@ -39,8 +40,9 @@ internal sealed class HttpForwarder(HttpMessageInvoker httpClient, ForwardProxyO
     /// For a WebSocket upgrade (<see cref="IsWebSocketUpgrade"/>), starts tunnel telemetry once the destination accepts
     /// the upgrade; <see langword="null"/> for other requests.
     /// </param>
+    /// <param name="intercepted">Whether this request is inside a TLS-intercepted tunnel.</param>
     /// <remarks>An exception from a request transform propagates, so it is reported as a proxy internal error.</remarks>
-    public async Task<ForwardingFailure?> SendAsync(HttpContext context, Uri target, ForwardProxyDestination destination, Func<TunnelTelemetry>? startTunnel)
+    public async Task<ForwardingFailure?> SendAsync(HttpContext context, Uri target, ForwardProxyDestination destination, Func<TunnelTelemetry>? startTunnel, bool intercepted)
     {
         var activity = ActivityCancellationTokenSource.Rent(options.HttpActivityTimeout, context.RequestAborted);
         try
@@ -58,28 +60,46 @@ internal sealed class HttpForwarder(HttpMessageInvoker httpClient, ForwardProxyO
                 return await HandleRequestFailureAsync(context, requestContent, ex, activity).ConfigureAwait(false);
             }
 
-            foreach (var transform in transforms)
+            using var outgoingRequest = request;
+            UpstreamHttpClientPool.Lease lease;
+            try
             {
-                await transform.TransformRequestAsync(context, destination, request, context.RequestAborted).ConfigureAwait(false);
-                if (request.RequestUri is not { IsAbsoluteUri: true } transformedUri
-                    || !string.Equals(transformedUri.AbsoluteUri, target.AbsoluteUri, StringComparison.Ordinal))
+                foreach (var transform in transforms)
                 {
-                    throw new InvalidOperationException("Request transforms must not change the destination URI.");
+                    await transform.TransformRequestAsync(context, destination, request, context.RequestAborted).ConfigureAwait(false);
+                    if (request.RequestUri is not { IsAbsoluteUri: true } transformedUri
+                        || !string.Equals(transformedUri.AbsoluteUri, target.AbsoluteUri, StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException("Request transforms must not change the destination URI.");
+                    }
+
+                    if (request.Headers.NonValidated.TryGetValues(HeaderNames.Host, out var hosts)
+                        && (hosts.Count != 1
+                            || !AuthorityParser.TryParse(hosts.ToString(), target.Scheme == Uri.UriSchemeHttps ? 443 : 80, out var transformedHost, out var transformedPort)
+                            || transformedHost != destination.Host || transformedPort != destination.Port))
+                    {
+                        throw new InvalidOperationException("Request transforms must not change the destination authority.");
+                    }
                 }
 
-                if (request.Headers.NonValidated.TryGetValues(HeaderNames.Host, out var hosts)
-                    && (hosts.Count != 1
-                        || !AuthorityParser.TryParse(hosts.ToString(), target.Scheme == Uri.UriSchemeHttps ? 443 : 80, out var transformedHost, out var transformedPort)
-                        || transformedHost != destination.Host || transformedPort != destination.Port))
-                {
-                    throw new InvalidOperationException("Request transforms must not change the destination authority.");
-                }
+                lease = clients.Acquire(await SelectCertificateAsync(context, destination, intercepted).ConfigureAwait(false));
+            }
+            catch (ProxyErrorException ex)
+            {
+                await CancelRequestBodyAsync(requestContent, activity).ConfigureAwait(false);
+                return new("ClientCertificate", ex.Error, ex);
+            }
+            catch
+            {
+                await CancelRequestBodyAsync(requestContent, activity).ConfigureAwait(false);
+                throw;
             }
 
+            using var clientLease = lease;
             HttpResponseMessage response;
             try
             {
-                response = await httpClient.SendAsync(request, activity.Token).ConfigureAwait(false);
+                response = await lease.Client.SendAsync(request, activity.Token).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -158,6 +178,28 @@ internal sealed class HttpForwarder(HttpMessageInvoker httpClient, ForwardProxyO
         finally
         {
             activity.Return();
+        }
+    }
+
+    private async ValueTask<X509Certificate2?> SelectCertificateAsync(HttpContext context, ForwardProxyDestination destination, bool intercepted)
+    {
+        if (!intercepted || context.RequestServices.GetService<IForwardProxyUpstreamClientCertificateSelector>() is not { } selector)
+        {
+            return null;
+        }
+
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted);
+        timeout.CancelAfter(options.ConnectTimeout);
+        try
+        {
+            var certificate = await selector.SelectAsync(context, destination, timeout.Token).ConfigureAwait(false);
+            timeout.Token.ThrowIfCancellationRequested();
+            return certificate;
+        }
+        catch (OperationCanceledException) when (!context.RequestAborted.IsCancellationRequested)
+        {
+            throw new ProxyErrorException(new(StatusCodes.Status504GatewayTimeout, ProxyErrorTypes.ConnectionTimeout,
+                "Timed out selecting the upstream client certificate."));
         }
     }
 
