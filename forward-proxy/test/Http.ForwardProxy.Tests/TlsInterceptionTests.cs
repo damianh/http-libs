@@ -390,6 +390,26 @@ public class TlsInterceptionTests
     }
 
     [Fact]
+    public async Task SelectorOwnedCancellationIsNotReportedAsTimeout()
+    {
+        var originRequests = 0;
+        await using var origin = await OriginHost.StartAsync(tls: true, handler: _ =>
+        {
+            Interlocked.Increment(ref originRequests);
+            return Task.CompletedTask;
+        });
+        await using var proxy = await StartInterceptingProxyAsync(
+            configure: options => options.ConnectTimeout = TimeSpan.FromMinutes(1),
+            configureServices: services => services.AddSingleton<IForwardProxyInterceptionSelector>(
+                new SelectorOwnedCancellationSelector()));
+        using var client = CreateClient(proxy);
+        var exception = await Should.ThrowAsync<HttpRequestException>(() => client.GetStringAsync(origin.Uri, Ct));
+
+        exception.StatusCode.ShouldBe(HttpStatusCode.InternalServerError);
+        originRequests.ShouldBe(0);
+    }
+
+    [Fact]
     public async Task TunnelsWhenNoSelectorIsRegistered()
     {
         await using var origin = await OriginHost.StartAsync(tls: true);
@@ -657,6 +677,15 @@ public class TlsInterceptionTests
                 cancellation.TrySetResult();
                 throw;
             }
+        }
+    }
+
+    private sealed class SelectorOwnedCancellationSelector : IForwardProxyInterceptionSelector
+    {
+        public ValueTask<bool> ShouldInterceptAsync(HttpContext context, ForwardProxyDestination destination, CancellationToken cancellationToken)
+        {
+            cancellationToken.IsCancellationRequested.ShouldBeFalse();
+            throw new OperationCanceledException(new CancellationToken(canceled: true));
         }
     }
 

@@ -132,7 +132,7 @@ internal sealed class ForwardProxyHandler : IDisposable
         {
             return await selector.ShouldInterceptAsync(context, destination, timeout.Token).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) when (!context.RequestAborted.IsCancellationRequested)
+        catch (OperationCanceledException) when (timeout.IsCancellationRequested && !context.RequestAborted.IsCancellationRequested)
         {
             throw new ProxyErrorException(new(
                 StatusCodes.Status504GatewayTimeout,
