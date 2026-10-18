@@ -11,6 +11,8 @@
 
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.AppHost" Version="13.6.1" />
+    <!-- Pin past transitive 2.5.302 from Aspire.Hosting (GHSA-qhrr-8q5h-9q3h, NU1902). Remove once Aspire references a patched version. -->
+    <PackageReference Include="MessagePack" Version="2.5.303" />
     <ProjectReference Include="..\EstInterception.CaHost\EstInterception.CaHost.csproj" />
     <ProjectReference Include="..\EstInterception.Proxy\EstInterception.Proxy.csproj" />
   </ItemGroup>

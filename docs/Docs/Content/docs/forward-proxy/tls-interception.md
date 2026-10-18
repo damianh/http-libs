@@ -43,7 +43,8 @@ intercepted tunnel.
    HTTP/2 are negotiated with ALPN.
 4. Each request inside the tunnel runs through your application's middleware
    pipeline. `app.UseForwardProxy()` then sends it to `https://example.com:443`
-   over a new TLS connection, validating the destination's certificate.
+   over an upstream TLS connection, validating the destination's certificate.
+   Connections are pooled separately for each selected client-certificate identity.
 
 Kestrel does the TLS and HTTP work through an in-memory endpoint, so intercepted
 requests get Kestrel's limits, HTTP/2 support and request pipeline.
@@ -227,6 +228,94 @@ with a different normalized host or port is rejected with the same error;
 transforms cannot reroute requests after destination policy checks. Equivalent
 authorities, including omitted default ports, are allowed.
 
+## Upstream client certificates (mTLS)
+
+Register an `IForwardProxyUpstreamClientCertificateSelector` to authenticate
+the proxy to HTTPS destinations with a client certificate. This is separate
+from `IForwardProxyCertificateProvider`, which supplies the server certificate
+the proxy presents to downstream clients.
+
+The optional selector is resolved from `HttpContext.RequestServices` for
+**each intercepted request**, after preceding middleware and all request
+transforms, immediately before sending upstream. Singleton, scoped and
+transient registrations are supported. It is never called for plain HTTP
+forwarding or opaque `CONNECT` tunnels.
+
+For a certificate-bound token, capture the token and certificate together
+in middleware or a request transform. Do not fetch the current certificate
+again in the selector: renewal between token acquisition and selection could
+otherwise pair the token with a different certificate. For example, with an
+application-provided `workloadCredentials` service:
+
+```csharp
+builder.Services.AddScoped<IForwardProxyUpstreamClientCertificateSelector, RequestCertificateSelector>();
+
+// Before app.UseForwardProxy().
+app.Use(async (context, next) =>
+{
+    if (context.Features.Get<IForwardProxyInterceptionFeature>() is { } interception)
+    {
+        // Application-specific policy and credential lookup; capture one immutable snapshot.
+        var identity = await workloadCredentials.GetForRequestAsync(context, interception.Destination, context.RequestAborted);
+        context.Items[typeof(UpstreamIdentity)] = identity;
+        context.Request.Headers.Authorization = $"Bearer {identity.AccessToken}";
+    }
+
+    await next(context);
+});
+
+sealed record UpstreamIdentity(string AccessToken, X509Certificate2? Certificate);
+
+sealed class RequestCertificateSelector : IForwardProxyUpstreamClientCertificateSelector
+{
+    public ValueTask<X509Certificate2?> SelectAsync(
+        HttpContext context, ForwardProxyDestination destination, CancellationToken cancellationToken) =>
+        ValueTask.FromResult((context.Items[typeof(UpstreamIdentity)] as UpstreamIdentity)?.Certificate);
+}
+```
+
+The example needs `System.Security.Cryptography.X509Certificates` and the usual
+ASP.NET Core/ForwardProxy namespaces. The credential service and access policy
+belong to your application; the proxy does not acquire or inspect tokens.
+
+An absent selector or a `null` result means **no upstream client certificate**.
+If your policy requires mTLS, reject a missing certificate in your middleware
+instead of forwarding. A non-null result must be currently valid and have a
+usable private key. The library makes a private-key-preserving copy without
+exporting the key and never disposes the returned certificate. Do not dispose
+it concurrently with forwarding starting; the application's credential
+provider retains ownership of its SVIDs/certificates.
+
+Each SHA-256 hash of the leaf certificate's DER has its own immutable handler
+and connection pools. Different certificates and the no-certificate identity
+never share upstream connections, even for the same destination. Different
+objects containing the same certificate share a pool. Renewed certificates
+get new pools, and existing streams continue under their original identity.
+Certificate-specific handlers disable TLS session resumption to avoid
+resuming authentication from another identity. They retain the default
+dialer, destination policy, timeouts, propagation, and destination-certificate
+validation.
+
+The origin must request and validate client authentication. TLS cannot force
+a server that does not request a certificate to receive one. For RFC 8705
+tokens, the origin must also check `cnf.x5t#S256` against the certificate it
+actually authenticated. Custom intermediate-chain bundles are not part of
+this leaf-certificate selector API.
+
+By default, at most 128 certificate identities are cached. An entry becomes
+idle only after its complete response body or upgraded WebSocket finishes,
+and is disposed after 2 minutes idle. Idle entries can be reclaimed earlier
+to make room for another identity. If all entries are active, a request
+needing a new identity gets `503 connection_limit_reached`, never a fallback
+certificate. The no-certificate pool does not consume this limit. The proxy
+disposes its handlers, copies, and cleanup timer on shutdown.
+
+Selection receives a cancellation token linked to client abort and
+`ConnectTimeout`. A selection timeout gets `504 connection_timeout`; an
+exception or invalid certificate gets logged `500 proxy_internal_error`
+without sending the request. Upstream TLS failures retain the usual `502`
+error mapping. Implementations must observe the cancellation token.
+
 ## Behaviour
 
 - Only origin-form requests (`GET /path`) are accepted inside an intercepted
@@ -255,6 +344,8 @@ authorities, including omitted default ports, are allowed.
 | `ClientProtocols` | `Http1AndHttp2` | HTTP versions offered to the client with ALPN: `Http1`, `Http2` or `Http1AndHttp2`. |
 | `HandshakeTimeout` | 10 s | Time allowed for the client's TLS handshake. |
 | `DestinationCertificateValidation` | `null` | Validates the destination's certificate. `null` accepts only certificates without errors. |
+| `MaxUpstreamClientCertificatePools` | 128 | Positive maximum number of upstream client-certificate identities. Idle entries are reclaimable; all-active saturation gets `503`. |
+| `UpstreamClientCertificatePoolIdleTimeout` | 2 min | Positive time without active forwarding operations before a certificate pool is disposed; at most `int.MaxValue` milliseconds. |
 
 ```csharp
 builder.Services.AddForwardProxyTlsInterception<ApiHostSelector, CaCertificateProvider>(options =>
