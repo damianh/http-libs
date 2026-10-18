@@ -186,6 +186,31 @@ public class UpstreamClientCertificateTests
     }
 
     [Fact]
+    public async Task SelectorOwnedCancellationIsNotReportedAsTimeout()
+    {
+        var originRequests = 0;
+        await using var origin = await OriginHost.StartAsync(tls: true, handler: _ =>
+        {
+            Interlocked.Increment(ref originRequests);
+            return Task.CompletedTask;
+        });
+        await using var proxy = await StartInterceptingProxyAsync(
+            configure: options => options.ConnectTimeout = TimeSpan.FromMinutes(1),
+            configureServices: services =>
+                services.AddSingleton<IForwardProxyUpstreamClientCertificateSelector>(new Selector((_, _, ct) =>
+                {
+                    ct.IsCancellationRequested.ShouldBeFalse();
+                    throw new OperationCanceledException(new CancellationToken(canceled: true));
+                })));
+        using var client = CreateClient(proxy);
+        using var response = await client.GetAsync(origin.Uri, Ct);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.InternalServerError);
+        response.Headers.GetValues("Proxy-Status").ShouldBe(["forward-proxy; error=proxy_internal_error"]);
+        originRequests.ShouldBe(0);
+    }
+
+    [Fact]
     public async Task SelectionTimeoutIsReportedWithoutSending()
     {
         var cancellation = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
