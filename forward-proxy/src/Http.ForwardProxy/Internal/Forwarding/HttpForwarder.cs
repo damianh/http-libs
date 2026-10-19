@@ -196,7 +196,7 @@ internal sealed class HttpForwarder(UpstreamHttpClientPool clients, ForwardProxy
             timeout.Token.ThrowIfCancellationRequested();
             return certificate;
         }
-        catch (OperationCanceledException) when (!context.RequestAborted.IsCancellationRequested)
+        catch (OperationCanceledException) when (timeout.IsCancellationRequested && !context.RequestAborted.IsCancellationRequested)
         {
             throw new ProxyErrorException(new(StatusCodes.Status504GatewayTimeout, ProxyErrorTypes.ConnectionTimeout,
                 "Timed out selecting the upstream client certificate."));
