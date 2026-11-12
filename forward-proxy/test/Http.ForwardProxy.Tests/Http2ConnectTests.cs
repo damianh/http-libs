@@ -178,7 +178,17 @@ public class Http2ConnectTests
         var request = Encoding.ASCII.GetBytes($"GET / HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\n\r\n");
         await WriteHttp2FrameAsync(tls, type: 0x00, flags: 0, streamId: 1, request);
         using var originSocket = await originAccept;
-        (await originSocket.ReceiveAsync(new byte[1024], TestContext.Current.CancellationToken)).ShouldBeGreaterThan(0);
+        var receivedRequest = new byte[request.Length];
+        for (var received = 0; received < receivedRequest.Length;)
+        {
+            var count = await originSocket.ReceiveAsync(
+                receivedRequest.AsMemory(received),
+                TestContext.Current.CancellationToken);
+            count.ShouldBeGreaterThan(0);
+            received += count;
+        }
+
+        receivedRequest.ShouldBe(request);
 
         var resetError = new byte[4];
         BinaryPrimitives.WriteUInt32BigEndian(resetError, 0x08);
