@@ -476,10 +476,14 @@ internal sealed class ForwardProxyHandler : IDisposable
                 }
                 else
                 {
-                    using var resetRegistration = resetUpstreamOnClientAbort
-                        ? clientClosed.UnsafeRegister(ResetUpstreamSocket, _socket!)
-                        : default;
                     result = await TunnelPump.RunAsync(clientInput, clientOutput, _socket!, _owner._options.TunnelIdleTimeout, cancellationToken).ConfigureAwait(false);
+                    if (resetUpstreamOnClientAbort
+                        && !result.UpstreamFailed
+                        && (clientClosed.IsCancellationRequested || result.ClientInputFailed))
+                    {
+                        // A zero linger timeout makes closing the socket send RST.
+                        _socket!.LingerState = new LingerOption(true, 0);
+                    }
                 }
 
                 return result;
@@ -497,20 +501,6 @@ internal sealed class ForwardProxyHandler : IDisposable
             {
                 _socket?.Dispose();
                 _owner._limiter.Release();
-            }
-        }
-
-        private static void ResetUpstreamSocket(object? state)
-        {
-            var socket = (Socket)state!;
-            try
-            {
-                // Reset immediately on an aborted HTTP/2 stream; waiting for the pump can send a FIN first.
-                socket.LingerState = new LingerOption(true, 0);
-                socket.Dispose();
-            }
-            catch (ObjectDisposedException)
-            {
             }
         }
 

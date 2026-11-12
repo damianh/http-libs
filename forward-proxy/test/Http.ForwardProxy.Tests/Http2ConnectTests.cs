@@ -123,7 +123,14 @@ public class Http2ConnectTests
         using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         var port = ((IPEndPoint)listener.LocalEndpoint).Port;
-        await using var proxy = await ProxyHost.StartAsync(tls: true);
+        var clientAborted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var proxy = await ProxyHost.StartAsync(
+            tls: true,
+            configureApp: app => app.Use(async (context, next) =>
+            {
+                context.RequestAborted.Register(() => clientAborted.TrySetResult());
+                await next();
+            }));
         using var client = new TcpClient();
         await client.ConnectAsync(IPAddress.Loopback, proxy.Port, TestContext.Current.CancellationToken);
         using var tls = new SslStream(client.GetStream(), leaveInnerStreamOpen: false, (_, _, _, _) => true);
@@ -176,6 +183,8 @@ public class Http2ConnectTests
         var resetError = new byte[4];
         BinaryPrimitives.WriteUInt32BigEndian(resetError, 0x08);
         await WriteHttp2FrameAsync(tls, type: 0x03, flags: 0, streamId: 1, resetError);
+        using var abortTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        await clientAborted.Task.WaitAsync(abortTimeout.Token);
 
         var ex = await Should.ThrowAsync<SocketException>(async () =>
         {
