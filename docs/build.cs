@@ -34,7 +34,9 @@ Target("generate", dependsOn: ["compile"], async () =>
     {
         Directory.Delete(output, recursive: true);
     }
-    await RunAsync("dotnet", $"tool run atoll build --root \"{site}\"", root);
+    // The Atoll CLI targets net10.0 but loads the net11.0 site assembly in-process.
+    await RunAsync("dotnet", $"tool run atoll build --root \"{site}\"", root,
+        configureEnvironment: env => env["DOTNET_ROLL_FORWARD"] = "LatestMajor");
     // Atoll emits directory URLs; Pages requires a root 404.html.
     File.Copy(Path.Combine(site, "dist", "404", "index.html"), Path.Combine(site, "dist", "404.html"), overwrite: true);
 });

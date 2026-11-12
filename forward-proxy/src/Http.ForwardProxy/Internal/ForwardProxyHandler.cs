@@ -477,7 +477,9 @@ internal sealed class ForwardProxyHandler : IDisposable
                 else
                 {
                     result = await TunnelPump.RunAsync(clientInput, clientOutput, _socket!, _owner._options.TunnelIdleTimeout, cancellationToken).ConfigureAwait(false);
-                    if (resetUpstreamOnClientAbort && clientClosed.IsCancellationRequested && !result.UpstreamFailed)
+                    if (resetUpstreamOnClientAbort
+                        && !result.UpstreamFailed
+                        && (clientClosed.IsCancellationRequested || result.ClientInputFailed))
                     {
                         // A zero linger timeout makes closing the socket send RST.
                         _socket!.LingerState = new LingerOption(true, 0);

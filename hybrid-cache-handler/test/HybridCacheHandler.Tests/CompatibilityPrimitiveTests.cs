@@ -16,7 +16,7 @@ public class CompatibilityPrimitiveTests
 {
     private static bool UsesLegacyAssets =>
         typeof(HttpHybridCacheHandler).Assembly.GetCustomAttribute<TargetFrameworkAttribute>()!.FrameworkName
-            != ".NETCoreApp,Version=v10.0";
+            .StartsWith(".NETCoreApp,", StringComparison.Ordinal) == false;
 
     [Fact]
     public void Header_snapshot_has_explicit_target_specific_representation()

@@ -1,5 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <TargetFramework />
+    <TargetFrameworks>$(LibraryTargetFrameworks)</TargetFrameworks>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
     <RootNamespace>DamianH.Http.HybridCacheHandler</RootNamespace>
@@ -8,7 +10,7 @@
   <ItemGroup>
     <Using Include="Xunit" />
     <Using Include="Shouldly" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.10" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="$(MicrosoftExtensionsVersion)" />
     <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.9.0" />
     <PackageReference Include="Shouldly" Version="4.3.0" />
     <PackageReference Include="xunit.v3.core.mtp-v2" Version="3.2.2" />

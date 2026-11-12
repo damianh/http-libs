@@ -47,6 +47,7 @@ internal static class CacheRuntime
         var expected = framework switch
         {
             "net10.0" => ".NETCoreApp,Version=v10.0",
+            "net11.0" => ".NETCoreApp,Version=v11.0",
             "netstandard2.0" => ".NETStandard,Version=v2.0",
             "net472" => ".NETFramework,Version=v4.7.2",
             _ => throw new ArgumentException("Unsupported implementation: " + framework)
@@ -54,8 +55,9 @@ internal static class CacheRuntime
         var runtime = RuntimeInformation.FrameworkDescription;
         if (framework == "net472" && !runtime.StartsWith(".NET Framework", StringComparison.Ordinal))
             throw new InvalidOperationException("net472 conformance MUST run on the real .NET Framework CLR: " + runtime);
-        if (framework != "net472" && !runtime.StartsWith(".NET 10.", StringComparison.Ordinal))
-            throw new InvalidOperationException("Conformance front-end requires .NET 10: " + runtime);
+        var requiredRuntime = framework == "net11.0" ? ".NET 11." : ".NET 10.";
+        if (framework != "net472" && !runtime.StartsWith(requiredRuntime, StringComparison.Ordinal))
+            throw new InvalidOperationException($"{framework} conformance front-end requires {requiredRuntime.TrimEnd('.')}: " + runtime);
 
         var descriptions = new List<string> { framework, runtime };
         foreach (var assembly in new[]

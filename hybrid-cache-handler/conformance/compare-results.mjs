@@ -24,7 +24,7 @@ if (frameworkIndex !== -1) {
   framework = args[frameworkIndex + 1]
   args.splice(frameworkIndex, 2)
 }
-if (!['net10.0', 'netstandard2.0', 'net472'].includes(framework)) {
+if (!['net10.0', 'net11.0', 'netstandard2.0', 'net472'].includes(framework)) {
   console.error('Unsupported --framework.')
   process.exit(2)
 }

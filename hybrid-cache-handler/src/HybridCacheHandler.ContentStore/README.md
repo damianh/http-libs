@@ -4,7 +4,7 @@
 streaming contracts for the HTTP caching handler and adapters, without a cloud
 SDK or HybridCache dependency.
 
-Targets are `net10.0`, `netstandard2.0`, and `net472`, matching the handler and
+Targets are `net10.0`, `net11.0`, `netstandard2.0`, and `net472`, matching the handler and
 four adapters. NuGet supplies older-target async support dependencies; enable
 automatic binding redirects in Framework applications. The handler's HybridCache
 dependency warns that `net472` is unsupported/untested upstream. The contracts

@@ -1,6 +1,6 @@
 # Google Cloud Storage HTTP cache content store
 
-`DamianH.Http.HybridCacheHandler.ContentStore.GoogleCloudStorage` targets `net10.0`,
+`DamianH.Http.HybridCacheHandler.ContentStore.GoogleCloudStorage` targets `net10.0`, `net11.0`,
 `netstandard2.0`, and `net472` using the official Google SDK and independent
 content-store contracts.
 Release tags use `cache-gcs-v`.

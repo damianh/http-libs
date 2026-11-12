@@ -1,5 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <TargetFramework />
+    <TargetFrameworks>$(LibraryTargetFrameworks)</TargetFrameworks>
     <RootNamespace>DamianH.Http.ForwardProxy</RootNamespace>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>

@@ -11,6 +11,8 @@ public sealed class AssetSelectionTests
     internal const string ExpectedFramework = ".NETStandard,Version=v2.0";
 #elif NETFRAMEWORK
     internal const string ExpectedFramework = ".NETFramework,Version=v4.7.2";
+#elif NET11_0
+    internal const string ExpectedFramework = ".NETCoreApp,Version=v11.0";
 #else
     internal const string ExpectedFramework = ".NETCoreApp,Version=v10.0";
 #endif

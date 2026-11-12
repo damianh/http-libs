@@ -52,18 +52,21 @@ the same baseline, so a third-party origin independently confirms the results.
 
 ## Running
 
-Requires the .NET 10 SDK. `--garden-origin` also needs Git and Python 3.12+
-(standard library only; set `PYTHON` or pass `--python <path>`).
+Requires the .NET 11 SDK and ASP.NET Core 10 runtime. `global.json` selects
+the .NET 11 SDK; the net10.0 target also requires the ASP.NET Core 10 runtime.
+Pass `-f net10.0` or `-f net11.0` to `dotnet run` to pick the target.
+`--garden-origin` also needs Git and Python 3.12+ (standard library only; set
+`PYTHON` or pass `--python <path>`).
 
 ```bash
 # Harness unit tests plus a full gated run with the built-in origin
 dotnet test --project forward-proxy/conformance/ForwardProxyConformance.Tests
 
 cd forward-proxy/conformance
-dotnet run --project ForwardProxyConformance -c Release                            # full run and gate
-dotnet run --project ForwardProxyConformance -c Release -- --test-id host-missing  # one fixture, diagnostic only
-dotnet run --project ForwardProxyConformance -c Release -- --update                # rewrite expected-results.json
-dotnet run --project ForwardProxyConformance -c Release -- --garden-origin         # gate using HTTP Garden's origin
+dotnet run --project ForwardProxyConformance -c Release -f net11.0 --                # full run and gate
+dotnet run --project ForwardProxyConformance -c Release -f net11.0 -- --test-id host-missing  # one fixture, diagnostic only
+dotnet run --project ForwardProxyConformance -c Release -f net11.0 -- --update                # rewrite expected-results.json
+dotnet run --project ForwardProxyConformance -c Release -f net11.0 -- --garden-origin         # gate using HTTP Garden's origin
 ```
 
 Runs write `results-full.json` (`results-garden-full.json` with
@@ -108,7 +111,7 @@ same change.
 
 ## Exploring with the Garden REPL
 
-`dotnet run --project ForwardProxyConformance -c Release -- --serve` keeps the
+`dotnet run --project ForwardProxyConformance -c Release -f net11.0 -- --serve` keeps the
 proxy and origin running until Ctrl+C and prints an entry to add to
 `.http-garden/external-services.yml`. With Garden's Python dependencies
 installed, its REPL can then transduce absolute-form payloads through the proxy

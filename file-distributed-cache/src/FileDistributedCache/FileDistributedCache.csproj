@@ -1,6 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <TargetFramework />
+    <TargetFrameworks>$(LibraryTargetFrameworks)</TargetFrameworks>
     <AssemblyName>DamianH.FileDistributedCache</AssemblyName>
     <RootNamespace>DamianH.FileDistributedCache</RootNamespace>
     <MinVerMinimumMajorMinor>0.1</MinVerMinimumMajorMinor>
@@ -29,9 +31,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="10.0.10" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.10" />
-    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="$(MicrosoftExtensionsVersion)" />
     <PackageReference Include="MinVer" Version="7.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

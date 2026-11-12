@@ -8,6 +8,7 @@ $packages = @{}
 $contractFloors = [Collections.Generic.HashSet[string]]::new()
 $frameworks = @{
     'net10.0' = @('net10.0', '.NETCoreApp10.0')
+    'net11.0' = @('net11.0', '.NETCoreApp11.0')
     'netstandard2.0' = @('netstandard2.0', '.NETStandard2.0')
     'net472' = @('net472', '.NETFramework4.7.2')
 }
@@ -33,10 +34,10 @@ foreach ($file in Get-ChildItem $ArtifactsPath -Filter '*.nupkg' -Recurse) {
         $version = [string] $nuspec.package.metadata.version
         $assetGroups = @($archive.Entries | Where-Object FullName -Match '^lib/[^/]+/[^/]+\.dll$' |
             ForEach-Object { $_.FullName.Split('/')[1] } | Sort-Object -Unique)
-        if ($assetGroups.Count -ne 3 -or @($assetGroups | Where-Object { -not $frameworks.ContainsKey($_) }).Count) {
+        if ($assetGroups.Count -ne $frameworks.Count -or @($assetGroups | Where-Object { -not $frameworks.ContainsKey($_) }).Count) {
             throw "$id has unexpected library framework groups: $assetGroups"
         }
-        if (@($nuspec.package.metadata.dependencies.group).Count -ne 3) { throw "$id has unexpected dependency framework groups" }
+        if (@($nuspec.package.metadata.dependencies.group).Count -ne $frameworks.Count) { throw "$id has unexpected dependency framework groups" }
         foreach ($tfm in $frameworks.Keys) {
             if (-not $archive.GetEntry("lib/$tfm/$id.dll")) { throw "$id is missing lib/$tfm/$id.dll" }
             $groups = @($nuspec.package.metadata.dependencies.group | Where-Object targetFramework -In $frameworks[$tfm])
@@ -56,7 +57,7 @@ foreach ($file in Get-ChildItem $ArtifactsPath -Filter '*.nupkg' -Recurse) {
             }
         }
         $packages[$id] = @{ Version = $version; Path = $file.FullName }
-        Write-Host "Verified $id $version : net10.0, netstandard2.0, net472 assets/dependencies"
+        Write-Host "Verified $id $version : $(($frameworks.Keys | Sort-Object) -join ', ') assets/dependencies"
     }
     finally { $archive.Dispose() }
 }
@@ -100,7 +101,7 @@ try {
   </packageSourceMapping>
 </configuration>
 "@ | Set-Content (Join-Path $work 'NuGet.Config')
-    foreach ($tfm in @('net10.0', 'netstandard2.0', 'net472')) {
+    foreach ($tfm in @('net10.0', 'net11.0', 'netstandard2.0', 'net472')) {
         $projectDirectory = Join-Path $work $tfm
         New-Item -ItemType Directory -Path $projectDirectory | Out-Null
         $outputType = if ($tfm -eq 'netstandard2.0') { 'Library' } else { 'Exe' }
@@ -110,6 +111,7 @@ try {
         $extra = if ($tfm -eq 'net472') {
             '<Reference Include="System.Net.Http" /><PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />'
         } else { '' }
+        $extensionsVersion = if ($tfm -eq 'net11.0') { '11.0.0' } else { '10.0.10' }
         $escapedOutput = [Security.SecurityElement]::Escape($output + [IO.Path]::DirectorySeparatorChar)
         @"
 <Project Sdk="Microsoft.NET.Sdk">
@@ -122,8 +124,8 @@ try {
   </PropertyGroup>
   <ItemGroup>
 $references
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.10" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.10" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="$extensionsVersion" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="$extensionsVersion" />
     $extra
   </ItemGroup>
 </Project>
@@ -149,8 +151,8 @@ $references
         }
         & dotnet build $project -c Release --no-restore --disable-build-servers -m:1 -v minimal
         if ($LASTEXITCODE) { throw "Package consumer build failed: $tfm (exit $LASTEXITCODE)" }
-        if ($tfm -eq 'net10.0') {
-            & dotnet (Join-Path $output 'Release\net10.0\Consumer.dll')
+        if ($tfm -in @('net10.0', 'net11.0')) {
+            & dotnet (Join-Path $output "Release\$tfm\Consumer.dll")
             if ($LASTEXITCODE) { throw "Package consumer execution failed: $tfm" }
         }
         elseif ($tfm -eq 'net472' -and $IsWindows) {

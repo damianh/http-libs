@@ -1,5 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <TargetFramework />
+    <TargetFrameworks>$(LibraryTargetFrameworks)</TargetFrameworks>
     <AssemblyName>DamianH.Http.ForwardProxy</AssemblyName>
     <RootNamespace>DamianH.Http.ForwardProxy</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>

@@ -1,4 +1,5 @@
 <Project>
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildThisFileDirectory)../'))" />
   <PropertyGroup>
     <!-- Release ContentStore first; advance this floor only when consumers need new contracts. -->
     <HttpCacheContentStorePackageVersion Condition="'$(HttpCacheContentStorePackageVersion)' == ''">0.1.0</HttpCacheContentStorePackageVersion>

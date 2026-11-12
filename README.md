@@ -28,7 +28,7 @@ A collection of .NET libraries for HTTP caching, structured field values, messag
 
 ## Build and test
 
-Requires the **.NET 10 SDK**. Run from the repository root; each library has its own build script and solution filter:
+Requires the **.NET 11 SDK** and the **ASP.NET Core 10 runtime** (libraries and tests target both `net10.0` and `net11.0`). Run from the repository root; each library has its own build script and solution filter:
 
 ```bash
 dotnet run signatures/build.cs -- build   # or: forwarded-headers, forward-proxy, structured-field-values, hybrid-cache-handler, file-distributed-cache

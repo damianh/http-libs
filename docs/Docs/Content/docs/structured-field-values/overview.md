@@ -121,4 +121,4 @@ for ownership, equality, and breaking changes.
 
 - [`samples/AspNetCoreSample`](https://github.com/damianh/http-libs/tree/main/structured-field-values/samples/AspNetCoreSample) — ASP.NET Core integration for `Priority`, `Accept-CH`, and a custom token-list field.
 
-> **Note**: The sample projects target .NET 10 with `LangVersion=preview` and use C# 14 extension declaration syntax.
+> **Note**: The sample projects target .NET 11 with `LangVersion=preview` and use C# 14 extension declaration syntax.

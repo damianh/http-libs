@@ -30,7 +30,7 @@ FluentStorage are not dependencies.
 contracts for the handler and adapters. No cloud SDK or HybridCache dependency
 is required to implement a store.
 
-The contracts and all five consuming HTTP cache packages ship `net10.0`,
+The contracts and all five consuming HTTP cache packages ship `net10.0`, `net11.0`,
 `netstandard2.0`, and `net472` assets. Let NuGet restore the older-target async
 support packages and enable automatic binding redirects in Framework
 applications. See [framework compatibility](/docs/hybrid-cache-handler/compatibility/)
@@ -118,7 +118,7 @@ On Linux and macOS, the `netstandard2.0` and `net472` builds create private stag
 directories through native POSIX `mkdir` (`libc`), with a UTF-8 path and owner-only
 mode `0700`. The return code is checked: there is no weaker-permission fallback
 or narrowing of permissions after writing response data. This OS call does not
-inspect runtime internals. The `net10.0` build uses managed
+inspect runtime internals. The `net10.0` and `net11.0` builds use managed
 `Directory.CreateDirectory` with `UnixFileMode`. Windows uses the managed API
 and the trusted parent's ACLs. Other operating systems are unsupported for
 older-target disk spooling. These are platform requirements, not claims of

@@ -1,5 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <TargetFramework />
+    <TargetFrameworks>$(LibraryTargetFrameworks)</TargetFrameworks>
     <OutputType>Exe</OutputType>
     <AssemblyName>HttpHybridCacheHandler.ContentStore.FileSystem.Tests</AssemblyName>
     <RootNamespace>DamianH.Http.HybridCacheHandler.ContentStore.FileSystem.Tests</RootNamespace>
@@ -8,8 +10,8 @@
   </PropertyGroup>
   <ItemGroup>
     <Using Include="Xunit" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.10" />
-    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.8.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="$(MicrosoftExtensionsTimeProviderTestingVersion)" />
     <PackageReference Include="xunit.v3.core.mtp-v2" Version="3.2.2" />
     <PackageReference Include="xunit.v3.assert" Version="3.2.2" />
     <ProjectReference Include="..\..\src\HybridCacheHandler.ContentStore.FileSystem\HybridCacheHandler.ContentStore.FileSystem.csproj" />

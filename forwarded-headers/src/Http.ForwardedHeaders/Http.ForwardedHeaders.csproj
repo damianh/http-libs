@@ -1,5 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <TargetFramework />
+    <TargetFrameworks>$(LibraryTargetFrameworks)</TargetFrameworks>
     <AssemblyName>DamianH.Http.ForwardedHeaders</AssemblyName>
     <RootNamespace>DamianH.Http.ForwardedHeaders</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>

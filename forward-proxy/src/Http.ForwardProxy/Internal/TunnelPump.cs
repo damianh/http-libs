@@ -15,7 +15,13 @@ internal static class TunnelPump
     /// <param name="BytesDownstream">Bytes relayed from the destination to the client.</param>
     /// <param name="IdleTimedOut">The tunnel was closed because it was idle.</param>
     /// <param name="UpstreamFailed">The destination connection failed (for example, it was reset) rather than closing.</param>
-    public readonly record struct Result(long BytesUpstream, long BytesDownstream, bool IdleTimedOut, bool UpstreamFailed = false);
+    /// <param name="ClientInputFailed">The client request-body stream failed rather than ending normally.</param>
+    public readonly record struct Result(
+        long BytesUpstream,
+        long BytesDownstream,
+        bool IdleTimedOut,
+        bool UpstreamFailed = false,
+        bool ClientInputFailed = false);
 
     /// <summary>
     /// Runs until the upstream closes, the client aborts, or the tunnel is idle for <paramref name="idleTimeout"/>.
@@ -47,7 +53,12 @@ internal static class TunnelPump
         }
 
         await Task.WhenAll(upTask, downTask).ConfigureAwait(false);
-        return new(Interlocked.Read(ref state.BytesUpstream), Interlocked.Read(ref state.BytesDownstream), state.IdleTimedOut, state.UpstreamFailed);
+        return new(
+            Interlocked.Read(ref state.BytesUpstream),
+            Interlocked.Read(ref state.BytesDownstream),
+            state.IdleTimedOut,
+            state.UpstreamFailed,
+            state.ClientInputFailed);
     }
 
     /// <returns><see langword="true"/> when the client completed gracefully (half-close).</returns>
@@ -57,7 +68,17 @@ internal static class TunnelPump
         {
             while (true)
             {
-                var result = await input.ReadAsync(cancellationToken).ConfigureAwait(false);
+                ReadResult result;
+                try
+                {
+                    result = await input.ReadAsync(cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception ex) when (IsTunnelTermination(ex))
+                {
+                    state.ClientInputFailed = ex is not OperationCanceledException;
+                    return false;
+                }
+
                 var buffer = result.Buffer;
                 foreach (var segment in buffer)
                 {
@@ -133,5 +154,6 @@ internal static class TunnelPump
         public long BytesDownstream;
         public volatile bool IdleTimedOut;
         public volatile bool UpstreamFailed;
+        public bool ClientInputFailed;
     }
 }

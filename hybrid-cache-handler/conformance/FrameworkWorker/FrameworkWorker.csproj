@@ -9,8 +9,8 @@
   <ItemGroup>
     <Reference Include="System.Net.Http" />
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.10" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.10" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="$(MicrosoftExtensionsVersion)" />
     <ProjectReference Include="..\..\src\HybridCacheHandler\HybridCacheHandler.csproj" />
     <ProjectReference Include="..\..\src\HybridCacheHandler.ContentStore.FileSystem\HybridCacheHandler.ContentStore.FileSystem.csproj" />
     <Compile Include="..\Shared\*.cs" Link="Shared\%(Filename)%(Extension)" />

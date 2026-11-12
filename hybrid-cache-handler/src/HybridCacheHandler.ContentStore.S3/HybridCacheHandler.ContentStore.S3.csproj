@@ -18,12 +18,12 @@
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="\" />
     <PackageReference Include="AWSSDK.S3" Version="4.0.102.5" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.10" />
-    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.10" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="$(MicrosoftExtensionsVersion)" />
     <PackageReference Include="MinVer" Version="7.0.0" PrivateAssets="all" />
     <ProjectReference Include="..\HybridCacheHandler.ContentStore\HybridCacheHandler.ContentStore.csproj" />
   </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)' != 'net10.0'">
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' Or '$(TargetFramework)' == 'net472'">
     <PackageReference Include="System.Memory" Version="4.6.3" />
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.10" />
   </ItemGroup>

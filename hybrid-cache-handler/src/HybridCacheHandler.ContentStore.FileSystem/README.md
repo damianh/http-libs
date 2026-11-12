@@ -4,7 +4,7 @@
 bodies using local files and bounded 64 KiB streaming copies. It is independent
 of the handler and FileDistributedCache, with `cache-filesystem-v` release tags.
 
-Targets are `net10.0`, `netstandard2.0`, and `net472`. Retention uses the supplied
+Targets are `net10.0`, `net11.0`, `netstandard2.0`, and `net472`. Retention uses the supplied
 `TimeProvider` on every target, including fake clocks. Legacy cleanup uses a
 coalescing timer and is cancelled and joined on disposal.
 
