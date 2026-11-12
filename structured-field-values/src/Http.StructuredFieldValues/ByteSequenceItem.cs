@@ -38,8 +38,30 @@ public sealed class ByteSequenceItem : BareItem
     public static ByteSequenceItem FromBase64(string base64Value)
     {
         ArgumentNullException.ThrowIfNull(base64Value);
-        var bytes = Convert.FromBase64String(base64Value);
+        var bytes = Convert.FromBase64String(ClearPadBits(base64Value));
         return new ByteSequenceItem(bytes);
+    }
+
+    // RFC 9651 section 4.2.7: parsers SHOULD NOT fail when non-zero pad bits are present.
+    // .NET 11 Convert.FromBase64String rejects them, so clear them before decoding.
+    private static string ClearPadBits(string base64Value)
+    {
+        const string Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        var padding = base64Value.EndsWith("==", StringComparison.Ordinal) ? 2
+            : base64Value.EndsWith('=') ? 1
+            : 0;
+        var lastDataIndex = base64Value.Length - padding - 1;
+        if (padding == 0 || lastDataIndex < 0)
+        {
+            return base64Value;
+        }
+        var index = Alphabet.IndexOf(base64Value[lastDataIndex]);
+        var mask = padding == 2 ? 0b11_0000 : 0b11_1100;
+        if (index < 0 || (index & mask) == index)
+        {
+            return base64Value;
+        }
+        return string.Concat(base64Value.AsSpan(0, lastDataIndex), Alphabet.AsSpan(index & mask, 1), base64Value.AsSpan(lastDataIndex + 1));
     }
 
     /// <summary>

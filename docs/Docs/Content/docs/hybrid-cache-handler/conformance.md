@@ -10,15 +10,16 @@ section: HTTP hybrid caching
 
 The pinned public [http-tests/cache-tests](https://github.com/http-tests/cache-tests)
 suite (`b55b8bda3dbb8c927c04e85bd8d496a8caa3e4ba`), behind
-[cache-tests.fyi](https://cache-tests.fyi), runs against three **actual
+[cache-tests.fyi](https://cache-tests.fyi), runs against four **actual
 implementation assets**, in default HybridCache and streaming filesystem modes.
-The front-end always uses .NET 10, ASP.NET Core, and YARP 2.3.0; it does not use
+The front-end uses .NET 10 (or .NET 11 for `net11.0`), ASP.NET Core, and YARP 2.3.0; it does not use
 HttpListener, URL ACL registration, an obsolete ASP.NET server, or a custom HTTP
 parser. The handler runs in `Shared` mode.
 
 | Implementation | Cache execution | Platforms |
 | --- | --- | --- |
 | `net10.0` | Direct handler, contracts, and filesystem .NET 10 assemblies | Windows, Linux |
+| `net11.0` | Direct handler, contracts, and filesystem .NET 11 assemblies in a .NET 11 host | Windows, Linux |
 | `netstandard2.0` | Direct .NET Standard 2.0 assemblies in a .NET 10 host | Windows, Linux |
 | `net472` | Separate .NET Framework console worker using the Framework CLR and all three `net472` assemblies | Windows only |
 
@@ -38,7 +39,7 @@ these runs do not change upstream support. See
 
 ## Run locally
 
-Requires .NET 10 SDK, Node.js 22+, npm, and Git. Framework runs also require a
+Requires the .NET 11 SDK and .NET 10 runtime, Node.js 22+, npm, and Git. Framework runs also require a
 Windows host with .NET Framework 4.7.2 or newer. Reference assemblies are restored
 from NuGet; the harness does not install machine-wide SDKs or modify machine ACLs.
 
@@ -46,6 +47,7 @@ From the repository root on Windows:
 
 ```powershell
 .\hybrid-cache-handler\conformance\run-conformance.ps1 -Framework net10.0
+.\hybrid-cache-handler\conformance\run-conformance.ps1 -Framework net11.0
 .\hybrid-cache-handler\conformance\run-conformance.ps1 -Framework netstandard2.0 -FileSystem
 .\hybrid-cache-handler\conformance\run-conformance.ps1 -Framework net472 -FileSystem
 ```

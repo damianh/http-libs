@@ -8,7 +8,7 @@ section: HTTP cache content stores
 
 # Google Cloud Storage HTTP cache content store
 
-`DamianH.Http.HybridCacheHandler.ContentStore.GoogleCloudStorage` targets `net10.0`,
+`DamianH.Http.HybridCacheHandler.ContentStore.GoogleCloudStorage` targets `net10.0`, `net11.0`,
 `netstandard2.0`, and `net472` (.NET Framework 4.7.2+)
 and uses the official `Google.Cloud.Storage.V1` **4.15.0** SDK. It depends on the
 content-store abstractions, not the HTTP handler. Its independent release tag

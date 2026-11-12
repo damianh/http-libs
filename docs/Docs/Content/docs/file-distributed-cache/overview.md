@@ -34,7 +34,7 @@ an individual file on the local filesystem, with no external infrastructure.
 | Microservices / SOA with multiple instances | Not shared across instances | Use a shared backend |
 | Scaled-out, load-balanced web apps | Each instance has its own cache | Use a shared cache |
 
-The current package targets .NET 10; the scenario examples above are not a
+The current package targets .NET 10 and .NET 11; the scenario examples above are not a
 compatibility guarantee for older framework versions.
 
 FileDistributedCache can be the L2 backend for `HybridCache` when you need
@@ -116,7 +116,7 @@ example with [HttpHybridCacheHandler](/docs/hybrid-cache-handler/overview/).
 
 The [FileDistributedCacheSample](https://github.com/damianh/http-libs/tree/main/file-distributed-cache/samples/FileDistributedCacheSample)
 demonstrates HTTP caching across process restarts. To run it from the repository
-root with the .NET 10 SDK:
+root with the .NET 11 SDK:
 
 ```sh
 dotnet run --project file-distributed-cache/samples/FileDistributedCacheSample

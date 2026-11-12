@@ -29,15 +29,15 @@ dotnet add package DamianH.Http.HybridCacheHandler
 
 ## Frameworks
 
-The handler and all five content-store packages ship `net10.0`,
-`netstandard2.0`, and `net472` assets. Samples still require .NET 10;
-FileDistributedCache remains a separate .NET 10 product.
+The handler and all five content-store packages ship `net10.0`, `net11.0`,
+`netstandard2.0`, and `net472` assets. Samples target .NET 11;
+FileDistributedCache is a separate product targeting .NET 10 and .NET 11.
 See [framework compatibility](/docs/hybrid-cache-handler/compatibility/) for
 header normalization, dependency support warnings, and validation coverage.
 HybridCache 10.8.0 warns that `net472` is unsupported/untested upstream; the
 library's compatibility tests do not change that support policy.
 
-## Quick start (.NET 10)
+## Quick start (.NET 10 or later)
 
 ```csharp
 var services = new ServiceCollection();

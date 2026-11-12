@@ -20,9 +20,9 @@ update meter subscriptions and any literal registration keys.
 
 ## Frameworks
 
-The handler and all five content-store packages ship `net10.0`,
-`netstandard2.0`, and `net472` assets. Samples and the separate FileDistributedCache
-product remain .NET 10. .NET Standard is a library target, not a runtime.
+The handler and all five content-store packages ship `net10.0`, `net11.0`,
+`netstandard2.0`, and `net472` assets. Samples target .NET 11; the separate FileDistributedCache
+product ships `net10.0` and `net11.0`. .NET Standard is a library target, not a runtime.
 Older-target headers can be normalized by public enumeration. Framework apps
 should enable automatic binding redirects and use `HttpClientHandler` with
 GZip/Deflate decompression instead of the modern handler example below.
@@ -33,7 +33,7 @@ coverage does not change Microsoft's support policy. Framework tests run on
 the installed Windows runtime, commonly 4.8, not necessarily an actual 4.7.2 runtime.
 See [framework compatibility](https://damianh.github.io/http-libs/docs/hybrid-cache-handler/compatibility/).
 
-## Install and start (.NET 10)
+## Install and start (.NET 10 or later)
 
 From your application project directory:
 

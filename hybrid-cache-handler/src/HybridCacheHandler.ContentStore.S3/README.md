@@ -1,6 +1,6 @@
 # Amazon S3 HTTP cache content store
 
-`DamianH.Http.HybridCacheHandler.ContentStore.S3` targets `net10.0`,
+`DamianH.Http.HybridCacheHandler.ContentStore.S3` targets `net10.0`, `net11.0`,
 `netstandard2.0`, and `net472` using the official AWS SDK and independent
 content-store contracts. Release tags use
 `cache-s3-v`.

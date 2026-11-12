@@ -1,6 +1,6 @@
 # Azure Blob HTTP cache content store
 
-`DamianH.Http.HybridCacheHandler.ContentStore.AzureBlob` targets `net10.0`,
+`DamianH.Http.HybridCacheHandler.ContentStore.AzureBlob` targets `net10.0`, `net11.0`,
 `netstandard2.0`, and `net472` using the official Azure SDK.
 It depends on the independent ContentStore package, not
 the handler or HybridCache; release tags use `cache-azureblob-v`.

@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <TargetFramework />
+    <TargetFrameworks>$(LibraryTargetFrameworks)</TargetFrameworks>
     <AssemblyName>DamianH.Http.HttpSignatures</AssemblyName>
     <RootNamespace>DamianH.Http.HttpSignatures</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>

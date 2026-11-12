@@ -49,7 +49,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        target: [test-compatibility-modern, test-compatibility-standard]
+        target: [test-compatibility-net10, test-compatibility-net11, test-compatibility-standard]
         include:
           - os: windows-latest
             target: test-compatibility-framework
@@ -59,7 +59,9 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: |
+            10.0.x
+            11.0.x
       - name: Test selected library assets
         run: dotnet run hybrid-cache-handler/build.cs -- ${{ matrix.target }}
       - name: Test report
@@ -88,6 +90,8 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: |
+            10.0.x
+            11.0.x
       - name: Pack all targets and check package consumers
         run: dotnet run hybrid-cache-handler/build.cs -- check-packages

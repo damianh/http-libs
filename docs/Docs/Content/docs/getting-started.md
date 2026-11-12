@@ -8,10 +8,10 @@ section: "Getting started"
 # Getting started
 
 http-libs is a collection of individual .NET libraries, not an umbrella package.
-Install only the packages your application needs. Use the **.NET 10 SDK** to build
-the repository or run its samples. The HTTP cache handler, ContentStore contracts,
+Install only the packages your application needs. Libraries target .NET 10 and .NET 11. Use the **.NET 11 SDK** (plus the .NET 10
+runtime for tests) to build the repository or run its samples. The HTTP cache handler, ContentStore contracts,
 and four adapters also ship .NET Standard 2.0 and .NET Framework 4.7.2 assets;
-the other libraries, including FileDistributedCache, remain .NET 10.
+the other libraries, including FileDistributedCache, target .NET 10 and .NET 11 only.
 Read [framework compatibility](/docs/hybrid-cache-handler/compatibility/) before
 choosing older targets, including the upstream HybridCache `net472` support warning.
 

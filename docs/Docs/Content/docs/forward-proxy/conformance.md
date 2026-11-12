@@ -52,7 +52,8 @@ the same baseline, so a third-party origin independently confirms the results.
 
 ## Running
 
-Requires the .NET 10 SDK. `--garden-origin` also needs Git and Python 3.12+
+Requires the .NET 11 SDK and the .NET 10 runtime; pass `-f net10.0` or
+`-f net11.0` to `dotnet run` to pick the target. `--garden-origin` also needs Git and Python 3.12+
 (standard library only; set `PYTHON` or pass `--python <path>`).
 
 ```bash

@@ -10,7 +10,7 @@ section: Forwarded Headers
 
 `DamianH.Http.ForwardedHeaders` provides standalone
 [RFC 7239](https://www.rfc-editor.org/rfc/rfc7239.html) `Forwarded`
-header parsing and trusted-proxy middleware for ASP.NET Core on .NET 10.
+header parsing and trusted-proxy middleware for ASP.NET Core on .NET 10 and .NET 11.
 
 ASP.NET Core's built-in `UseForwardedHeaders` reads `X-Forwarded-*`, not RFC 7239.
 This library processes `Forwarded` directly, keeping each hop's parameters

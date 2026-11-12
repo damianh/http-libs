@@ -14,10 +14,10 @@ copies. It depends on the abstractions and Microsoft extensions, not on the
 handler or `FileDistributedCache`. It is independently versioned using
 `cache-filesystem-v` tags.
 
-Targets are `net10.0`, `netstandard2.0`, and `net472` (.NET Framework 4.7.2+).
+Targets are `net10.0`, `net11.0`, `netstandard2.0`, and `net472` (.NET Framework 4.7.2+).
 Retention uses the supplied `TimeProvider` on every target, including fake clocks.
 Older targets use a coalescing periodic timer based on `TimeProvider.CreateTimer`;
-disposal cancels and joins cleanup just as on .NET 10.
+disposal cancels and joins cleanup just as on .NET 10 and later.
 
 [NuGet](https://www.nuget.org/packages/DamianH.Http.HybridCacheHandler.ContentStore.FileSystem/) |
 [Source](https://github.com/damianh/http-libs/tree/main/hybrid-cache-handler/src/HybridCacheHandler.ContentStore.FileSystem)

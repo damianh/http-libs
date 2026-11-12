@@ -45,7 +45,8 @@ while (!Directory.Exists(Path.Combine(repositoryRoot, ".git")) && !File.Exists(P
 
 foreach (var (target, framework, properties) in new[]
 {
-    ("test-compatibility-modern", "net10.0", ""),
+    ("test-compatibility-net10", "net10.0", ""),
+    ("test-compatibility-net11", "net11.0", ""),
     ("test-compatibility-standard", "net10.0", "-p:CompatibilityTargetFramework=netstandard2.0"),
     ("test-compatibility-framework", "net472", "")
 })
@@ -61,6 +62,8 @@ foreach (var (target, framework, properties) in new[]
             $"--report-xunit-trx --report-xunit-trx-filename {target}-tests.trx", repositoryRoot);
     });
 }
+
+AggregateTarget("test-compatibility-modern", ["test-compatibility-net10", "test-compatibility-net11"]);
 
 AggregateTarget("test-compatibility", OperatingSystem.IsWindows()
     ? ["test-compatibility-modern", "test-compatibility-standard", "test-compatibility-framework"]

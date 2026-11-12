@@ -23,7 +23,7 @@ var framework = builder.Configuration["framework"] ?? "net10.0";
 #if CONFORMANCE_STANDARD
 if (framework != "netstandard2.0") throw new ArgumentException("This host only tests netstandard2.0 assets.");
 #else
-if (framework is not ("net10.0" or "net472")) throw new ArgumentException("Use the Standard proxy project for netstandard2.0.");
+if (framework is not ("net10.0" or "net11.0" or "net472")) throw new ArgumentException("Use the Standard proxy project for netstandard2.0.");
 #endif
 var useFileSystem = bool.TryParse(builder.Configuration["file-system"], out var enabled) && enabled;
 var root = builder.Configuration["content-root"];

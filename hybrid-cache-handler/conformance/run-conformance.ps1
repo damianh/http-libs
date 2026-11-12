@@ -1,7 +1,7 @@
 # Runs pinned RFC 9111 fixtures using the shared cross-platform launcher.
 # Example: .\run-conformance.ps1 -Framework net472 -FileSystem
 param(
-    [ValidateSet('net10.0', 'netstandard2.0', 'net472')]
+    [ValidateSet('net10.0', 'net11.0', 'netstandard2.0', 'net472')]
     [string]$Framework = 'net10.0',
     [switch]$Update,
     [switch]$FileSystem,

@@ -11,11 +11,11 @@ topics:
 
 # HTTP cache framework compatibility
 
-All six HTTP cache packages ship `net10.0`, `netstandard2.0`, and `net472` assets:
+All six HTTP cache packages ship `net10.0`, `net11.0`, `netstandard2.0`, and `net472` assets:
 the handler, ContentStore contracts, and the Azure Blob, S3, Google Cloud Storage,
 and filesystem adapters. The .NET Standard build is a library asset, not an
-executable runtime. The existing samples, benchmarks, and YARP conformance
-front-end remain .NET 10 applications. The separate
+executable runtime. The samples and benchmarks are .NET 11 applications; the YARP
+conformance front-end runs on .NET 10 or .NET 11 (see below). The separate
 [FileDistributedCache](/docs/file-distributed-cache/overview/) product is not
 part of this target expansion.
 
@@ -42,7 +42,7 @@ with `using` on all targets; for async disposal on older targets, cast to
 
 ## Header representation
 
-- `net10.0` retains the `HttpHeaders.NonValidated` snapshot path.
+- `net10.0` and `net11.0` retain the `HttpHeaders.NonValidated` snapshot path.
 - `netstandard2.0` and `net472` use supported public header enumeration,
   preserving the values and value boundaries it exposes. No reflection,
   private runtime fields, serialized-header reparsing, or comma-joining
@@ -64,7 +64,7 @@ responsibilities, see
 
 ## Compatibility validation
 
-The dedicated compatibility suite runs the `net10.0` baseline, explicitly forced
+The dedicated compatibility suite runs the `net10.0` and `net11.0` baselines, explicitly forced
 `netstandard2.0` library assets on a .NET 10 host on Windows/Linux, and `net472`
 executables on Windows. It asserts `TargetFrameworkAttribute` on all six loaded
 assemblies rather than assuming a modern test host selected older assets.
@@ -80,7 +80,7 @@ or custom metadata serializer.
 From the repository root:
 
 ```powershell
-dotnet run hybrid-cache-handler/build.cs -- test-compatibility-modern
+dotnet run hybrid-cache-handler/build.cs -- test-compatibility-modern  # net10.0 + net11.0
 dotnet run hybrid-cache-handler/build.cs -- test-compatibility-standard
 # Windows only
 dotnet run hybrid-cache-handler/build.cs -- test-compatibility-framework
@@ -91,7 +91,7 @@ dotnet run hybrid-cache-handler/build.cs -- check-packages
 Framework test executables target 4.7.2, but Windows runners generally have
 an in-place .NET Framework 4.8 runtime. The suite reports the installed runtime;
 this is not a claim that an actual 4.7.2 runtime was tested. Package checks build
-all three consumer targets, run .NET 10 consumers on Windows/Linux and Framework
+all four consumer targets, run .NET 10 and .NET 11 consumers on Windows/Linux and Framework
 consumers on Windows, and inspect selected compile/runtime package assets.
 The .NET Standard consumer is build-only; the forced-asset test host provides
 its executable behavioral coverage.

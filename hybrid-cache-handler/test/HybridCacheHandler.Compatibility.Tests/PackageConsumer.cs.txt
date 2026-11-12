@@ -19,6 +19,8 @@ internal static class Program
         const string expected = ".NETFramework,Version=v4.7.2";
 #elif NETSTANDARD2_0
         const string expected = ".NETStandard,Version=v2.0";
+#elif NET11_0
+        const string expected = ".NETCoreApp,Version=v11.0";
 #else
         const string expected = ".NETCoreApp,Version=v10.0";
 #endif

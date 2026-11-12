@@ -1,6 +1,6 @@
 # DamianH.Http.ForwardProxy
 
-An HTTP forward (egress) proxy for ASP.NET Core and Kestrel on .NET 10. Clients
+An HTTP forward (egress) proxy for ASP.NET Core and Kestrel on .NET 10 and .NET 11. Clients
 configure it as their proxy (`HTTPS_PROXY`, `HttpClient.Proxy`, `curl --proxy`)
 to reach arbitrary destinations, subject to your authentication, authorization
 and destination rules.

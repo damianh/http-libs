@@ -23,7 +23,7 @@ for (let i = 0; i < args.length; i++) {
     default: throw new Error(`Unknown option: ${args[i]}`)
   }
 }
-if (!['net10.0', 'netstandard2.0', 'net472'].includes(options.framework)) throw new Error('Invalid --framework.')
+if (!['net10.0', 'net11.0', 'netstandard2.0', 'net472'].includes(options.framework)) throw new Error('Invalid --framework.')
 if (options.framework === 'net472' && process.platform !== 'win32') throw new Error('net472 conformance requires Windows and the real .NET Framework CLR.')
 if (options.update && (options.framework !== 'net10.0' || options.testId)) throw new Error('Only full net10.0 runs may update the common baseline.')
 for (const port of [options.originPort, options.proxyPort]) {
@@ -171,7 +171,8 @@ try {
   if (readFileSync(pidFile, 'utf8') !== String(origin.pid)) throw new Error('Origin readiness PID mismatch.')
 
   const proxy = launch('dotnet', [
-    join(root, proxyName, 'bin', 'Release', 'net10.0', `${proxyName}.dll`),
+    // The net11.0 implementation needs the net11.0 host; other implementations run behind the net10.0 host.
+    join(root, proxyName, 'bin', 'Release', options.framework === 'net11.0' ? 'net11.0' : 'net10.0', `${proxyName}.dll`),
     '--framework', options.framework, '--port', String(proxyPort), '--origin', `http://127.0.0.1:${originPort}`,
     '--file-system', String(options.fileSystem), '--content-root', contentRoot,
     '--worker', join(root, 'FrameworkWorker', 'bin', 'Release', 'net472', 'FrameworkWorker.exe')

@@ -26,8 +26,12 @@ env:
 
 jobs:
   conformance:
-    name: HTTP/1.1 conformance fixtures (HTTP Garden)
+    name: "HTTP/1.1 conformance fixtures (HTTP Garden): ${{ matrix.framework }}"
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        framework: [net10.0, net11.0]
     permissions:
       contents: read
     timeout-minutes: 15
@@ -37,7 +41,9 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: |
+            10.0.x
+            11.0.x
 
       - name: Setup Python (HTTP Garden origin)
         uses: actions/setup-python@v5
@@ -45,16 +51,16 @@ jobs:
           python-version: '3.13'
 
       - name: Harness tests and conformance gate (built-in origin)
-        run: dotnet test --project forward-proxy/conformance/ForwardProxyConformance.Tests -c Release
+        run: dotnet test --project forward-proxy/conformance/ForwardProxyConformance.Tests -c Release -f ${{ matrix.framework }}
 
       - name: Conformance gate (HTTP Garden origin)
-        run: dotnet run --project forward-proxy/conformance/ForwardProxyConformance -c Release -- --garden-origin
+        run: dotnet run --project forward-proxy/conformance/ForwardProxyConformance -c Release -f ${{ matrix.framework }} -- --garden-origin
 
       - name: Upload conformance results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: forward-proxy-conformance-results
+          name: forward-proxy-conformance-results-${{ matrix.framework }}
           path: |
             forward-proxy/conformance/results-*.json
             forward-proxy/conformance/*.log

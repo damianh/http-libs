@@ -1,0 +1,14 @@
+<Project>
+  <!-- Microsoft.Extensions.* versions are pinned per target framework: 11.x on net11.0+, 10.x elsewhere.
+       Defined in .targets so the project's final TargetFramework is known. -->
+  <PropertyGroup Condition="'$(TargetFramework)' != '' And $([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))">
+    <MicrosoftExtensionsVersion>11.0.0</MicrosoftExtensionsVersion>
+    <MicrosoftExtensionsCachingHybridVersion>11.0.0</MicrosoftExtensionsCachingHybridVersion>
+    <MicrosoftExtensionsTimeProviderTestingVersion>11.0.0</MicrosoftExtensionsTimeProviderTestingVersion>
+  </PropertyGroup>
+  <PropertyGroup>
+    <MicrosoftExtensionsVersion Condition="'$(MicrosoftExtensionsVersion)' == ''">10.0.10</MicrosoftExtensionsVersion>
+    <MicrosoftExtensionsCachingHybridVersion Condition="'$(MicrosoftExtensionsCachingHybridVersion)' == ''">10.8.0</MicrosoftExtensionsCachingHybridVersion>
+    <MicrosoftExtensionsTimeProviderTestingVersion Condition="'$(MicrosoftExtensionsTimeProviderTestingVersion)' == ''">10.8.0</MicrosoftExtensionsTimeProviderTestingVersion>
+  </PropertyGroup>
+</Project>

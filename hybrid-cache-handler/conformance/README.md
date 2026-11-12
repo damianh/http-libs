@@ -1,19 +1,21 @@
 # RFC 9111 conformance matrix
 
-The pinned public `http-tests/cache-tests` suite exercises actual `net10.0`,
+The pinned public `http-tests/cache-tests` suite exercises actual `net10.0`, `net11.0`,
 `netstandard2.0`, and `net472` handler assets in default HybridCache and streaming
-filesystem modes. Modern and Standard assets run in .NET 10 hosts; Framework
+filesystem modes. `net11.0` assets run in a .NET 11 host; `net10.0` and Standard assets run in
+.NET 10 hosts; Framework
 assets run in a separate Windows .NET Framework worker, not on modern .NET.
 
 **[Full conformance guide](https://damianh.github.io/http-libs/docs/hybrid-cache-handler/conformance/)**
 covers prerequisites, the IPC bridge, runtime provenance, exact regression
 gating, result artifacts, and harness tests.
 
-Requires .NET 10 SDK, Node.js 22+, npm, and Git. Framework runs additionally
+Requires the .NET 11 SDK and .NET 10 runtime, Node.js 22+, npm, and Git. Framework runs additionally
 require Windows with .NET Framework 4.7.2 or newer. Run from this directory:
 
 ```powershell
 .\run-conformance.ps1 -Framework net10.0
+.\run-conformance.ps1 -Framework net11.0
 .\run-conformance.ps1 -Framework netstandard2.0 -FileSystem
 .\run-conformance.ps1 -Framework net472 -FileSystem
 ```

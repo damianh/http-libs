@@ -1,7 +1,7 @@
 # DamianH.Http.ForwardedHeaders
 
 RFC 7239 `Forwarded` parsing and trusted-proxy middleware for ASP.NET Core on
-.NET 10. Reads `Forwarded` only: no translation, merging, preference, or fallback
+.NET 10 and .NET 11. Reads `Forwarded` only: no translation, merging, preference, or fallback
 to `X-Forwarded-*`. RFC 7239 is not a Structured Field. Even parser-only use
 requires the ASP.NET Core runtime; there is no public serializer in v1.
 
