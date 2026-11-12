@@ -116,6 +116,18 @@ public class ModelInvariantTests
         Should.Throw<ArgumentNullException>(() => ByteSequenceItem.FromBase64(null!));
     }
 
+    [Theory]
+    [InlineData("Zh==", "Zg==")]
+    [InlineData("Zm9=", "Zm8=")]
+    [InlineData("iZ==", "iQ==")]
+    [InlineData("iZ==\r\n", "iQ==")]
+    [InlineData("iZ= =", "iQ==")]
+    [InlineData("Z h =\t=", "Zg==")]
+    public void ByteSequences_AcceptNonZeroPadBits(string input, string expected)
+    {
+        ByteSequenceItem.FromBase64(input).Base64Value.ShouldBe(expected);
+    }
+
     [Fact]
     public void DisplayStrings_RejectUnpairedSurrogates()
     {

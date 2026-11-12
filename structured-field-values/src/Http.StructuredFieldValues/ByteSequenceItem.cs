@@ -46,6 +46,11 @@ public sealed class ByteSequenceItem : BareItem
     // .NET 11 Convert.FromBase64String rejects them, so clear them before decoding.
     private static string ClearPadBits(string base64Value)
     {
+        // Convert.FromBase64String ignores these, so drop them to locate the padding.
+        if (base64Value.AsSpan().IndexOfAny(" \t\r\n") >= 0)
+        {
+            base64Value = string.Concat(base64Value.Where(c => c is not (' ' or '\t' or '\r' or '\n')));
+        }
         const string Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
         var padding = base64Value.EndsWith("==", StringComparison.Ordinal) ? 2
             : base64Value.EndsWith('=') ? 1

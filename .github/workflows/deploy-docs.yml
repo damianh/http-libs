@@ -10,6 +10,7 @@ on:
       - .github/workflows/deploy-docs.yml
       - .editorconfig
       - Directory.Build.props
+      - Directory.Build.targets
       - global.json
       - http-lib.slnx
       - README.md
@@ -26,6 +27,7 @@ on:
       - .github/workflows/deploy-docs.yml
       - .editorconfig
       - Directory.Build.props
+      - Directory.Build.targets
       - global.json
       - http-lib.slnx
       - README.md

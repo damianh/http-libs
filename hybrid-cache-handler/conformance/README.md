@@ -10,7 +10,7 @@ assets run in a separate Windows .NET Framework worker, not on modern .NET.
 covers prerequisites, the IPC bridge, runtime provenance, exact regression
 gating, result artifacts, and harness tests.
 
-Requires the .NET 11 SDK and .NET 10 runtime, Node.js 22+, npm, and Git. Framework runs additionally
+Requires the .NET 11 SDK and ASP.NET Core 10 runtime, Node.js 22+, npm, and Git. Framework runs additionally
 require Windows with .NET Framework 4.7.2 or newer. Run from this directory:
 
 ```powershell

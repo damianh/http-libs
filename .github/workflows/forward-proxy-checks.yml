@@ -10,6 +10,7 @@ on:
       - .github/workflows/forward-proxy-checks.yml
       - forward-proxy/**
       - Directory.Build.props
+      - Directory.Build.targets
       - global.json
       - http-lib.slnx
   pull_request:
@@ -17,6 +18,7 @@ on:
       - .github/workflows/forward-proxy-checks.yml
       - forward-proxy/**
       - Directory.Build.props
+      - Directory.Build.targets
       - global.json
       - http-lib.slnx
 

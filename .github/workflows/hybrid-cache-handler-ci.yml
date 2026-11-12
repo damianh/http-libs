@@ -15,6 +15,7 @@ on:
       - hybrid-cache-handler/**
       - .editorconfig
       - Directory.Build.props
+      - Directory.Build.targets
       - global.json
       - http-lib.slnx
   pull_request:
@@ -27,6 +28,7 @@ on:
       - hybrid-cache-handler/**
       - .editorconfig
       - Directory.Build.props
+      - Directory.Build.targets
       - global.json
       - http-lib.slnx
 

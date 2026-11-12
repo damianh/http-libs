@@ -39,7 +39,7 @@ these runs do not change upstream support. See
 
 ## Run locally
 
-Requires the .NET 11 SDK and .NET 10 runtime, Node.js 22+, npm, and Git. Framework runs also require a
+Requires the .NET 11 SDK and ASP.NET Core 10 runtime, Node.js 22+, npm, and Git. Framework runs also require a
 Windows host with .NET Framework 4.7.2 or newer. Reference assemblies are restored
 from NuGet; the harness does not install machine-wide SDKs or modify machine ACLs.
 

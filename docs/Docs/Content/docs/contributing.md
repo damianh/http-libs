@@ -13,7 +13,7 @@ The repository is licensed under
 
 ## Build and test
 
-Install the **.NET 11 SDK** and the **.NET 10 runtime**; libraries and tests target
+Install the **.NET 11 SDK** and the **ASP.NET Core 10 runtime**; libraries and tests target
 both `net10.0` and `net11.0`. Run every command in this guide from the repository
 root, not from a library or documentation subdirectory.
 

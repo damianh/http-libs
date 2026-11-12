@@ -10,6 +10,7 @@ on:
       - .github/workflows/hybrid-cache-handler-checks.yml
       - hybrid-cache-handler/**
       - Directory.Build.props
+      - Directory.Build.targets
       - global.json
       - http-lib.slnx
   pull_request:
@@ -17,6 +18,7 @@ on:
       - .github/workflows/hybrid-cache-handler-checks.yml
       - hybrid-cache-handler/**
       - Directory.Build.props
+      - Directory.Build.targets
       - global.json
       - http-lib.slnx
 
