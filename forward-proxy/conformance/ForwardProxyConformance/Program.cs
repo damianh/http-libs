@@ -7,7 +7,7 @@ using System.Text.Json;
 using DamianH.Http.ForwardProxy.Conformance;
 
 const string Usage = """
-    Usage: dotnet run --project forward-proxy/conformance/ForwardProxyConformance -c Release -- [options]
+    Usage: dotnet run --project forward-proxy/conformance/ForwardProxyConformance -c Release -f net11.0 -- [options]
 
       --test-id <id>       Run one fixture (diagnostic; does not gate).
       --update             Rewrite expected-results.json from a full run.

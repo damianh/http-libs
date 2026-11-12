@@ -121,9 +121,10 @@ public class Http2ConnectTests
         var port = ((IPEndPoint)listener.LocalEndpoint).Port;
         await using var proxy = await ProxyHost.StartAsync(tls: true);
 
+        // Allow TLS and CONNECT setup to finish before curl aborts the HTTP/2 stream on slower runners.
         var curl = CurlAsync(
             "-sS", "--proxy", $"https://127.0.0.1:{proxy.Port}", "--proxy-insecure",
-            "--proxy-http2", "--proxytunnel", "--max-time", "1", $"http://127.0.0.1:{port}/");
+            "--proxy-http2", "--proxytunnel", "--max-time", "5", $"http://127.0.0.1:{port}/");
         using var originSocket = await listener.AcceptSocketAsync(TestContext.Current.CancellationToken);
         await originSocket.ReceiveAsync(new byte[1024], TestContext.Current.CancellationToken);
         var (exitCode, _, _) = await curl;

@@ -14,18 +14,19 @@ third-party origin; both must produce the same baseline.
 **[Full guide](https://damianh.github.io/http-libs/docs/forward-proxy/conformance/)**
 covers the fixture format, expectations, known failures and limitations.
 
-Requires the .NET 10 SDK. `--garden-origin` also needs Git and Python 3.12+
-(standard library only); Docker is never needed. From the repository root:
+Requires the .NET 11 SDK and ASP.NET Core 10 runtime. `--garden-origin` also
+needs Git and Python 3.12+ (standard library only); Docker is never needed.
+From the repository root:
 
 ```bash
 dotnet test --project forward-proxy/conformance/ForwardProxyConformance.Tests   # harness tests + full gate
 
 cd forward-proxy/conformance
-dotnet run --project ForwardProxyConformance -c Release                              # full run, gated
-dotnet run --project ForwardProxyConformance -c Release -- --test-id host-missing    # diagnostic, does not gate
-dotnet run --project ForwardProxyConformance -c Release -- --update                  # rewrite the baseline after review
-dotnet run --project ForwardProxyConformance -c Release -- --garden-origin           # gate using HTTP Garden's origin
-dotnet run --project ForwardProxyConformance -c Release -- --serve                   # keep proxy and origin up for the Garden REPL
+dotnet run --project ForwardProxyConformance -c Release -f net11.0 --                # full run, gated
+dotnet run --project ForwardProxyConformance -c Release -f net11.0 -- --test-id host-missing    # diagnostic, does not gate
+dotnet run --project ForwardProxyConformance -c Release -f net11.0 -- --update                  # rewrite the baseline after review
+dotnet run --project ForwardProxyConformance -c Release -f net11.0 -- --garden-origin           # gate using HTTP Garden's origin
+dotnet run --project ForwardProxyConformance -c Release -f net11.0 -- --serve                   # keep proxy and origin up for the Garden REPL
 ```
 
 `results-*.json`, logs and `.http-garden/` are ignored by Git. HTTP Garden is
