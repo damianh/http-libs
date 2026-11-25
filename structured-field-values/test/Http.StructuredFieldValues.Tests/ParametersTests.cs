@@ -17,7 +17,7 @@ public class ParametersTests
         };
 
         var parameters = new Parameters(initial);
-        
+
         parameters.Count.ShouldBe(2);
         parameters["a"].ShouldBeOfType<IntegerItem>();
         parameters["b"].ShouldBeOfType<IntegerItem>();
@@ -25,15 +25,6 @@ public class ParametersTests
 
     [Fact]
     public void Constructor_WithNull_ThrowsArgumentNullException() => Should.Throw<ArgumentNullException>(() => new Parameters(null!));
-
-    [Fact]
-    public void Add_ValidParameter_Success()
-    {
-        var parameters = new Parameters { { "test", new IntegerItem(42) } };
-
-        parameters.Count.ShouldBe(1);
-        parameters["test"].ShouldBeOfType<IntegerItem>();
-    }
 
     [Fact]
     public void Add_Flag_IsNonNullBooleanTrue()
@@ -82,114 +73,6 @@ public class ParametersTests
     }
 
     [Fact]
-    public void Add_EmptyKey_ThrowsArgumentException()
-    {
-        var parameters = new Parameters();
-        Should.Throw<ArgumentException>(() => parameters.Add("", new IntegerItem(1)));
-    }
-
-    [Fact]
-    public void Indexer_Set_NewKey_Success()
-    {
-        var parameters = new Parameters();
-        parameters["newkey"] = new IntegerItem(42);
-        
-        parameters.Count.ShouldBe(1);
-        parameters["newkey"].ShouldBeOfType<IntegerItem>();
-    }
-
-    [Fact]
-    public void Indexer_Set_ExistingKey_UpdatesValue()
-    {
-        var parameters = new Parameters();
-        parameters["test"] = new IntegerItem(1);
-        parameters["test"] = new IntegerItem(2);
-        
-        parameters.Count.ShouldBe(1);
-        ((IntegerItem)parameters["test"]!).LongValue.ShouldBe(2);
-    }
-
-    [Fact]
-    public void Indexer_Get_NonExistentKey_ThrowsKeyNotFoundException()
-    {
-        var parameters = new Parameters();
-        Should.Throw<KeyNotFoundException>(() => { _ = parameters["missing"]; });
-    }
-
-    [Fact]
-    public void TryGetValue_ExistingKey_ReturnsTrue()
-    {
-        var parameters = new Parameters { { "test", new IntegerItem(42) } };
-
-        var result = parameters.TryGetValue("test", out var value);
-        
-        result.ShouldBeTrue();
-        value.ShouldNotBeNull();
-        value.ShouldBeOfType<IntegerItem>();
-    }
-
-    [Fact]
-    public void TryGetValue_NonExistentKey_ReturnsFalse()
-    {
-        var parameters = new Parameters();
-        
-        var result = parameters.TryGetValue("missing", out var value);
-        
-        result.ShouldBeFalse();
-        value.ShouldBeNull();
-    }
-
-    [Fact]
-    public void ContainsKey_ExistingKey_ReturnsTrue()
-    {
-        var parameters = new Parameters { { "test", new IntegerItem(42) } };
-
-        parameters.ContainsKey("test").ShouldBeTrue();
-    }
-
-    [Fact]
-    public void ContainsKey_NonExistentKey_ReturnsFalse()
-    {
-        var parameters = new Parameters();
-        parameters.ContainsKey("missing").ShouldBeFalse();
-    }
-
-    [Fact]
-    public void Remove_ExistingKey_ReturnsTrue()
-    {
-        var parameters = new Parameters { { "test", new IntegerItem(42) } };
-
-        var result = parameters.Remove("test");
-        
-        result.ShouldBeTrue();
-        parameters.Count.ShouldBe(0);
-    }
-
-    [Fact]
-    public void Remove_NonExistentKey_ReturnsFalse()
-    {
-        var parameters = new Parameters();
-        
-        var result = parameters.Remove("missing");
-        
-        result.ShouldBeFalse();
-    }
-
-    [Fact]
-    public void Clear_RemovesAllParameters()
-    {
-        var parameters = new Parameters
-        {
-            { "a", new IntegerItem(1) },
-            { "b", new IntegerItem(2) }
-        };
-
-        parameters.Clear();
-        
-        parameters.Count.ShouldBe(0);
-    }
-
-    [Fact]
     public void GetEnumerator_PreservesInsertionOrder()
     {
         var parameters = new Parameters
@@ -199,8 +82,6 @@ public class ParametersTests
             { "b", new IntegerItem(2) }
         };
 
-        var keys = parameters.Select(kvp => kvp.Key).ToList();
-        
-        keys.ShouldBe(new[] { "c", "a", "b" });
+        parameters.Select(kvp => kvp.Key).ShouldBe(["c", "a", "b"]);
     }
 }

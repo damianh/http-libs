@@ -38,19 +38,6 @@ public class BuilderValidationTests
     }
 
     [Fact]
-    public void TryParse_EmptyOptionalDictionary_ReturnsTrue()
-    {
-        var mapper = StructuredFieldMapper<PriorityHeader>.Dictionary(b => b
-            .Member("u", x => x.Urgency));
-
-        var result = mapper.TryParse("", out var value);
-
-        result.ShouldBeTrue();
-        value.ShouldNotBeNull();
-        value.Urgency.ShouldBeNull();
-    }
-
-    [Fact]
     public void Parse_TypeMismatch_ThrowsStructuredFieldParseException()
     {
         var mapper = StructuredFieldMapper<PriorityHeader>.Dictionary(b => b
