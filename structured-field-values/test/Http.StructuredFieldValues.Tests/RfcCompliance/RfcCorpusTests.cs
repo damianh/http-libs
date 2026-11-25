@@ -8,7 +8,12 @@ namespace DamianH.Http.StructuredFieldValues.RfcCompliance;
 
 public class RfcCorpusTests
 {
-    private static readonly string[] Cultures = ["en-US", "fr-FR", "de-DE"];
+    // Culture-sensitive formatting only affects numeric and date values, so only those fixtures
+    // run under multiple cultures; every other fixture runs once under the invariant culture ("").
+    private static readonly string[] NumericCultures = ["en-US", "fr-FR", "de-DE"];
+    private static readonly string[] InvariantCulture = [""];
+    private static readonly HashSet<string> CultureSensitiveFixtures =
+        ["number.json", "number-generated.json", "date.json"];
 
     public static IEnumerable<object[]> ParseCases() => Cases(requireExpected: false);
 
@@ -106,6 +111,7 @@ public class RfcCorpusTests
     {
         foreach (var (fileName, tests) in RfcTestLoader.Fixtures)
         {
+            var cultures = CultureSensitiveFixtures.Contains(fileName) ? NumericCultures : InvariantCulture;
             for (var index = 0; index < tests.Length; index++)
             {
                 var test = tests[index];
@@ -114,7 +120,7 @@ public class RfcCorpusTests
                     continue;
                 }
 
-                foreach (var culture in Cultures)
+                foreach (var culture in cultures)
                 {
                     // Primitive theory arguments are serializable by xUnit v3/MTP.
                     yield return [fileName, index, test.Name, culture];

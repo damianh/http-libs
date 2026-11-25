@@ -11,11 +11,4 @@ public class AcceptClientHintHeaderValue
 {
     /// <summary>Gets the requested client hint header names as tokens.</summary>
     public IReadOnlyList<string> Hints { get; init; } = [];
-
-    /// <summary>Checks if a specific client hint is requested (case-insensitive).</summary>
-    public bool Contains(string hintName)
-    {
-        ArgumentNullException.ThrowIfNull(hintName);
-        return Hints.Any(t => string.Equals(t, hintName, StringComparison.OrdinalIgnoreCase));
-    }
 }
