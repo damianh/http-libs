@@ -70,8 +70,9 @@ or renaming a protocol test.
 | [RFC 8441](https://www.rfc-editor.org/rfc/rfc8441.html) extended `CONNECT` is passed to the application, not tunneled | `Http2ConnectTests.PassesExtendedConnectToTheApplication` |
 | Extended `CONNECT` inside an intercepted tunnel is rejected with `400` | `TlsInterceptionTests.RejectsExtendedConnectInsideTheTunnel` |
 
-The classic `CONNECT` tests use `curl --proxy-http2` and are skipped when that
-curl is not available.
+The classic `CONNECT` tests use a small managed HTTP/2 test client
+(`Http2ConnectClient`), because `HttpClient` always sends `:scheme` and `:path`.
+They need no external tools and always run.
 
 ## RFC 9209: `Proxy-Status`
 

@@ -84,27 +84,24 @@ public class TlsInterceptionTests
             return next(context);
         }));
 
-        var caPath = Path.Combine(Path.GetTempPath(), $"forward-proxy-test-ca-{Guid.NewGuid():N}.pem");
-        await File.WriteAllTextAsync(caPath, TestCertificateAuthority.Root.ExportCertificatePem(), Ct);
-        (int ExitCode, string Output, string Error) result;
-        try
+        var trusted = false;
+        var errors = SslPolicyErrors.None;
+        await using var tunnel = await Http2ConnectClient.ConnectAsync(proxy.Port, $"127.0.0.1:{origin.Port}", Ct);
+        tunnel.StatusCode.ShouldBe(StatusCodes.Status200OK);
+        using var client = tunnel.CreateHttpClient((certificate, e) =>
         {
-            result = await Http2ConnectTests.CurlAsync(
-                "-sS", "-v", "--trace-config", "h2-proxy", "--proxy", $"https://127.0.0.1:{proxy.Port}", "--proxy-insecure",
-                "--proxy-http2", "--cacert", caPath, new Uri(origin.Uri, "/h2").ToString());
-        }
-        finally
-        {
-            File.Delete(caPath);
-        }
+            trusted = TestCertificateAuthority.IsIssuedByRoot(certificate);
+            errors = e;
+            return trusted && (e & SslPolicyErrors.RemoteCertificateNameMismatch) == SslPolicyErrors.None;
+        });
 
-        var (exitCode, output, error) = result;
+        var body = await client.GetStringAsync(new Uri(origin.Uri, "/h2"), Ct);
 
-        exitCode.ShouldBe(0, error);
-        error.ShouldContain("CONNECT tunnel established, response 200");
-        output.ShouldContain("path=/h2");
-        output.ShouldContain("authorization=Bearer injected");
-        output.ShouldContain("header:x-protocol=HTTP/");
+        trusted.ShouldBeTrue();
+        (errors & SslPolicyErrors.RemoteCertificateNameMismatch).ShouldBe(SslPolicyErrors.None);
+        body.ShouldContain("path=/h2");
+        body.ShouldContain("authorization=Bearer injected");
+        body.ShouldContain("header:x-protocol=HTTP/");
     }
 
     [Fact]
