@@ -33,4 +33,21 @@ public class EndToEndTests
             File.Delete(log);
         }
     }
+
+    [Fact]
+    public async Task Disposing_the_proxy_releases_its_log_file()
+    {
+        var log = Path.GetTempFileName();
+        try
+        {
+            var proxy = await ConformanceProxy.StartAsync(0, log, TestContext.Current.CancellationToken);
+            await proxy.DisposeAsync();
+
+            using var exclusive = new FileStream(log, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        }
+        finally
+        {
+            File.Delete(log);
+        }
+    }
 }

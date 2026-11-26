@@ -18,7 +18,8 @@ internal static class ConformanceProxy
     {
         var builder = WebApplication.CreateSlimBuilder();
         builder.Logging.ClearProviders();
-        builder.Logging.AddProvider(new FileLoggerProvider(logPath));
+        // Container-created so the host disposes it (and closes the log file) when the app is disposed.
+        builder.Services.AddSingleton<ILoggerProvider>(_ => new FileLoggerProvider(logPath));
         builder.Logging.SetMinimumLevel(LogLevel.Warning);
         builder.WebHost.ConfigureKestrel(kestrel => kestrel.Listen(IPAddress.Loopback, port, listen =>
         {
