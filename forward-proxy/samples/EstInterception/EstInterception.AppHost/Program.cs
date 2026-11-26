@@ -7,7 +7,7 @@ var password = builder.AddParameter("est-password", secret: true);
 var interceptedHosts = builder.AddParameter("intercepted-hosts", value: "httpbin.org");
 var caCertificatePath = Path.Combine(Path.GetTempPath(), "http-libs-est-interception-ca.pem");
 
-var caHost = builder.AddProject<Projects.EstInterception_CaHost>("ca-host")
+var caHost = builder.AddDotnetProject("ca-host", @"..\EstInterception.CaHost\EstInterception.CaHost.csproj")
     .WithHttpsEndpoint(port: 5443, name: "https")
     .WithHttpEndpoint(port: 5444, name: "http")
     .WithEnvironment("Est__Password", password)
@@ -15,7 +15,7 @@ var caHost = builder.AddProject<Projects.EstInterception_CaHost>("ca-host")
     .WithEnvironment("Interception__AllowedHosts", interceptedHosts)
     .WithHttpHealthCheck("/healthz", endpointName: "http");
 
-builder.AddProject<Projects.EstInterception_Proxy>("proxy")
+builder.AddDotnetProject("proxy", @"..\EstInterception.Proxy\EstInterception.Proxy.csproj")
     .WithReference(caHost.GetEndpoint("https"))
     .WaitFor(caHost)
     .WithEnvironment("Est__Url", caHost.GetEndpoint("https"))
