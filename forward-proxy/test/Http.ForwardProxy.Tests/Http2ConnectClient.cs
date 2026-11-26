@@ -139,6 +139,7 @@ internal sealed class Http2ConnectClient : IAsyncDisposable
         var used = 0;
         return new HttpClient(new SocketsHttpHandler
         {
+            UseProxy = false,
             ConnectCallback = (_, _) => Interlocked.Exchange(ref used, 1) == 0
                 ? ValueTask.FromResult(Tunnel)
                 : throw new InvalidOperationException("The tunnel supports only one connection."),
