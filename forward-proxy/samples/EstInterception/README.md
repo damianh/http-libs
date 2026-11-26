@@ -11,6 +11,10 @@ configured host allowlist. The proxy never receives the CA private key.
 
 ## Run with Aspire
 
+The sample requires the .NET 11 SDK and Aspire 17. Install the
+[Aspire CLI](https://aspire.dev/get-started/install-cli/), or let `dotnet run` resolve the matching
+CLI through `dnx`. Aspire 17's .NET project resources do not yet support watch.
+
 ```shell
 dotnet run --project forward-proxy/samples/EstInterception/EstInterception.AppHost
 ```
